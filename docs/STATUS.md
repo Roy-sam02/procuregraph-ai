@@ -113,3 +113,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified in temporary PostgreSQL 17 that a synthetic invoice line traces through its PO to the contract price. A foreign key rejected a missing PO line.
 - All 12 unit tests passed. The temporary Compose resources were removed.
 - Loading the JSON fixture into these tables, selecting contract terms by invoice date, and assessing a database-backed case are pending.
+
+
+### Synthetic price case database seed
+
+- Added a seed command for `price_case_001.json` using stable UUIDs derived from its readable fixture IDs.
+- Verified in a fresh temporary PostgreSQL database that the stored case traces through the invoice, PO, supplier, product, and active contract price term. The existing price assessment returned an allowed unit price of INR 105.00 and total excess of INR 10.00.
+- All 12 unit tests passed. The temporary Compose container, volume, and network were removed.
+- Scope: one synthetic case with explicitly supplied 2025 dates and product details. The seed rejects a repeat run on the same database. FastAPI still uses its existing prototype price-check contract.
