@@ -33,3 +33,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Unit tests: 2 passed using the project virtual environment.
 - Direct backend and test dependency versions recorded.
 - Limitation: this is a liveness check; it does not check databases or other services.
+
+## Pricing API prototype
+
+- Added `POST /api/v1/pricing/check` using the existing price rule.
+- Manually verified a 106 invoice price returned `true` for a 105 limit.
+- Automated tests: 4 passed, including the boundary and invalid input.
+- Decision: `docs/ADRs/ADR-001-local-price-check.md`.
+- Limitation: caller-supplied values are not checked against stored evidence.
