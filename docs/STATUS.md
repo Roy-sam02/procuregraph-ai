@@ -143,3 +143,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Started one temporary PostgreSQL 17 service, applied Alembic migrations, seeded the synthetic price case, and served FastAPI through local Uvicorn.
 - A live HTTP request to the stored-case endpoint returned the INR 105 allowed unit price and INR 10 excess. The existing Boolean calculator also returned a violation for its test input.
 - This exercised the local synthetic demo with `PROCUREGRAPH_ENABLE_DEMO_DB_API=1`. The supplied tenant UUID is a lookup filter; user authentication and tenant authorization remain pending.
+
+
+### Reusable local synthetic demo
+
+- Added PowerShell start and stop scripts for a local FastAPI and PostgreSQL synthetic price demonstration.
+- Verified start, stop, start, and stop. Both starts returned the INR 105 allowed price and INR 10 excess through the live API. The second start reused the seeded PostgreSQL volume.
+- The stop script retains the named volume. The local `.env`, process ID, port, and logs are ignored by Git. The stored-case endpoint remains a local synthetic demo without user authentication.

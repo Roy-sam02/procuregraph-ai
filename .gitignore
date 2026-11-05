@@ -11,3 +11,5 @@ __pycache__/
 # Frontend-generated files
 node_modules/
 dist/
+# Local demo process and logs
+.local-demo.*
