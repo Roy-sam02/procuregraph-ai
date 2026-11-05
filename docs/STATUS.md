@@ -64,3 +64,12 @@ Define the first small procurement example and its deterministic price-checking 
 - The assessment checks supplier, product, currency, and ID links before price arithmetic.
 - Full unit test suite passed.
 - Limitation: these are local JSON records, not PostgreSQL or PDF evidence.
+
+## Public notice exploration
+
+- Added a read-only streaming explorer for the UK Contracts Finder 2025 JSONL download.
+- Verified the first three real records, including a notice with no award.
+- Full unit test suite: 12 passed.
+- The downloaded dataset remains outside Git.
+- Limitation: awards and notices do not establish invoice price violations;
+  public records are not yet part of the synthetic interview demo.
