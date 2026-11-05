@@ -105,3 +105,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified in temporary PostgreSQL 17 that a synthetic INR contract line stored a unit-price cap of 100.00 and a tolerance of 5.00 percent. The contract foreign key rejected a line pointing to a missing contract.
 - All 12 unit tests passed. The temporary Compose resources were removed.
 - Purchase order and invoice tables, invoice-date price selection, tenant access enforcement, and contract document versioning are pending.
+
+
+### Synthetic purchase orders and invoices
+
+- Added Alembic revision `0003_create_order_billing` for purchase orders, PO lines, invoices, and invoice lines.
+- Verified in temporary PostgreSQL 17 that a synthetic invoice line traces through its PO to the contract price. A foreign key rejected a missing PO line.
+- All 12 unit tests passed. The temporary Compose resources were removed.
+- Loading the JSON fixture into these tables, selecting contract terms by invoice date, and assessing a database-backed case are pending.
