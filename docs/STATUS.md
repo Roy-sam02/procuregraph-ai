@@ -73,3 +73,12 @@ Define the first small procurement example and its deterministic price-checking 
 - The downloaded dataset remains outside Git.
 - Limitation: awards and notices do not establish invoice price violations;
   public records are not yet part of the synthetic interview demo.
+
+## Public notice database schema draft
+
+- Drafted separate tables for public notices, awards, and award suppliers.
+- Verified one award can link to two suppliers without storing its amount twice.
+- Verified foreign keys reject an award without a notice and a supplier link without an award.
+- These checks ran in a temporary PostgreSQL 17 practice container.
+- Limitation: this is not an Alembic migration or persistent project database;
+  document references and ingestion are still to be designed.
