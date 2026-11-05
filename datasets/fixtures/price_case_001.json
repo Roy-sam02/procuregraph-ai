@@ -1,0 +1,25 @@
+{
+  "tenant_id": "DEMO-001",
+  "supplier": {
+    "id": "SUP-001",
+    "name": "Aster Supplies"
+  },
+  "contract_line": {
+    "id": "CL-001",
+    "contract_id": "CON-001",
+    "supplier_id": "SUP-001",
+    "product_id": "PROD-001",
+    "currency": "INR",
+    "max_unit_price": "100.00",
+    "tolerance_pct": "5.00"
+  },
+  "invoice_line": {
+    "id": "IL-001",
+    "invoice_id": "INV-001",
+    "supplier_id": "SUP-001",
+    "product_id": "PROD-001",
+    "currency": "INR",
+    "quantity": "10",
+    "unit_price": "106.00"
+  }
+}

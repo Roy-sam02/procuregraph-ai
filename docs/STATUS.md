@@ -41,3 +41,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Automated tests: 4 passed, including the boundary and invalid input.
 - Decision: `docs/ADRs/ADR-001-local-price-check.md`.
 - Limitation: caller-supplied values are not checked against stored evidence.
+
+## First synthetic procurement case
+
+- Added `datasets/fixtures/price_case_001.json`.
+- Verified matching supplier, product, and currency references.
+- Verified allowed unit price 105.00 and total excess 10.00.
+- Automated tests: 5 passed.
+- Limitation: fixture is a local JSON file, not PostgreSQL data or PDF evidence.
