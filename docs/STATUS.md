@@ -136,3 +136,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Added `POST /api/v1/pricing/cases/assess` for a stored synthetic invoice line, enabled locally with `PROCUREGRAPH_ENABLE_DEMO_DB_API=1`.
 - Verified the endpoint returns an INR 105.00 allowed unit price and INR 10.00 excess. A different tenant UUID receives 404. The existing Boolean price-check contract still passes its tests.
 - The unit suite and temporary PostgreSQL integration check passed. The endpoint has no user authentication; its supplied tenant UUID is a lookup filter, not proof of identity. It is disabled unless explicitly enabled for the local synthetic demo.
+
+
+### Live synthetic price API smoke test
+
+- Started one temporary PostgreSQL 17 service, applied Alembic migrations, seeded the synthetic price case, and served FastAPI through local Uvicorn.
+- A live HTTP request to the stored-case endpoint returned the INR 105 allowed unit price and INR 10 excess. The existing Boolean calculator also returned a violation for its test input.
+- This exercised the local synthetic demo with `PROCUREGRAPH_ENABLE_DEMO_DB_API=1`. The supplied tenant UUID is a lookup filter; user authentication and tenant authorization remain pending.
