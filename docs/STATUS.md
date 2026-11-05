@@ -82,3 +82,10 @@ Define the first small procurement example and its deterministic price-checking 
 - These checks ran in a temporary PostgreSQL 17 practice container.
 - Limitation: this is not an Alembic migration or persistent project database;
   document references and ingestion are still to be designed.
+
+
+### Public award document references
+
+- Sampled the first 1,000 UK Contracts Finder records. All 1,336 award document references had a usable source ID, URL, and award key. No document IDs repeated under the same award. Document type was unavailable for 211 references and format for 136.
+- Added a draft `public_award_documents` table for source metadata. A temporary PostgreSQL 17 test accepted a valid award link and rejected a missing award pair. The existing unit suite passed.
+- This is an offline public-data design. URL contents were not verified. No public data was imported and the draft is not an Alembic migration.

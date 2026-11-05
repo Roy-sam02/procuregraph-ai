@@ -26,3 +26,18 @@ CREATE TABLE public_award_suppliers (
     FOREIGN KEY (ocid, award_id)
         REFERENCES public_awards (ocid, award_id)
 );
+
+
+-- Source metadata for public award references. URLs are unverified.
+CREATE TABLE public_award_documents (
+    ocid text NOT NULL,
+    award_id text NOT NULL,
+    document_id text NOT NULL CHECK (document_id ~ '[^[:space:]]'),
+    url text NOT NULL CHECK (url ~ '[^[:space:]]'),
+    document_type text,
+    format text,
+    PRIMARY KEY (ocid, award_id, document_id),
+    CONSTRAINT public_award_documents_award_fk
+        FOREIGN KEY (ocid, award_id)
+        REFERENCES public_awards (ocid, award_id)
+);
