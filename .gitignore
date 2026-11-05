@@ -1,0 +1,13 @@
+# Local secrets; the example file will contain placeholders only
+.env
+.env.*
+!.env.example
+
+# Python-generated files
+.venv/
+__pycache__/
+*.pyc
+
+# Frontend-generated files
+node_modules/
+dist/
