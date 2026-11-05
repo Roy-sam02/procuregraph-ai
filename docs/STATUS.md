@@ -121,3 +121,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified in a fresh temporary PostgreSQL database that the stored case traces through the invoice, PO, supplier, product, and active contract price term. The existing price assessment returned an allowed unit price of INR 105.00 and total excess of INR 10.00.
 - All 12 unit tests passed. The temporary Compose container, volume, and network were removed.
 - Scope: one synthetic case with explicitly supplied 2025 dates and product details. The seed rejects a repeat run on the same database. FastAPI still uses its existing prototype price-check contract.
+
+
+### Read-only database price assessment
+
+- Added a tenant-scoped Python service that reads an invoice line and its linked supplier, product, PO, contract, and applicable price term from PostgreSQL, then calls the existing deterministic assessment.
+- Verified the seeded case returned an INR 105.00 unit-price limit and INR 10.00 excess. Changing the stored invoice price to INR 108.00 changed the excess to INR 30.00. A different tenant could not retrieve the case, and overlapping active price terms were rejected.
+- All 12 unit tests passed. The temporary Compose resources were removed.
+- The service is not yet exposed through an HTTP endpoint. The current schema's tenant and cross-record guarantees still need review before treating this as a production authorization boundary.
