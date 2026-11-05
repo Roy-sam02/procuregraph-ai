@@ -16,3 +16,11 @@
 ## Next milestone
 
 Define the first small procurement example and its deterministic price-checking rule.
+
+## First rule — price threshold
+
+- Implemented a same-currency contract price check using Decimal.
+- Verified prices below, at, and above the allowed maximum.
+- Test command: `py -m unittest discover -s tests/unit -p "test_*.py" -v`
+- Result: 1 test passed.
+- Limitations: no currency, date, or invalid-input validation yet.
