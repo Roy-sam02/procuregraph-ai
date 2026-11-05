@@ -57,3 +57,10 @@ Define the first small procurement example and its deterministic price-checking 
 - A valid invoice at the limit produces no violation and zero excess.
 - Full unit test suite passed.
 - Limitation: this uses a local JSON fixture, not stored records or PDF evidence.
+
+## Synthetic purchase order links
+
+- Added invoice, purchase order, and PO line records to the price fixture.
+- The assessment checks supplier, product, currency, and ID links before price arithmetic.
+- Full unit test suite passed.
+- Limitation: these are local JSON records, not PostgreSQL or PDF evidence.

@@ -1,5 +1,7 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from decimal import Decimal
+
+from apps.api.app.domain.record_links import validate_record_links
 
 
 RULE_ID = "CONTRACT_UNIT_PRICE_VIOLATION"
@@ -58,6 +60,8 @@ def assess_price_case(case: dict) -> PriceAssessment:
         raise ValueError(
             "currency mismatch between contract line and invoice line"
         )
+
+    validate_record_links(case)
 
     contract_price = Decimal(contract["max_unit_price"])
     tolerance = Decimal(contract["tolerance_pct"])
