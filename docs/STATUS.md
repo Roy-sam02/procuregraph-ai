@@ -49,3 +49,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified allowed unit price 105.00 and total excess 10.00.
 - Automated tests: 5 passed.
 - Limitation: fixture is a local JSON file, not PostgreSQL data or PDF evidence.
+## Structured synthetic price assessment
+
+- Added a structured assessment for the local synthetic price case.
+- Supplier, product, and currency mismatches raise errors before calculation.
+- The fixture produces an allowed unit price of INR 105.00 and excess of INR 10.00.
+- A valid invoice at the limit produces no violation and zero excess.
+- Full unit test suite passed.
+- Limitation: this uses a local JSON fixture, not stored records or PDF evidence.
