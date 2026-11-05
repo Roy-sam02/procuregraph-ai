@@ -97,3 +97,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Applied Alembic revision `0001_create_organizations` to a fresh test database and inserted one synthetic organization.
 - Verified that a replacement container using the same volume returned both the synthetic row and the stored revision. The unit suite passed and the temporary Compose resources were removed.
 - Scope: the revision creates only `organizations`. FastAPI database integration and the remaining synthetic schema are pending. The public notice draft remains a separate offline design.
+
+
+### Synthetic contract pricing schema
+
+- Added Alembic revision `0002_create_contract_pricing` for suppliers, products, contracts, and contract lines.
+- Verified in temporary PostgreSQL 17 that a synthetic INR contract line stored a unit-price cap of 100.00 and a tolerance of 5.00 percent. The contract foreign key rejected a line pointing to a missing contract.
+- All 12 unit tests passed. The temporary Compose resources were removed.
+- Purchase order and invoice tables, invoice-date price selection, tenant access enforcement, and contract document versioning are pending.
