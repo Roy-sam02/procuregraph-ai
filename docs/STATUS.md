@@ -24,3 +24,12 @@ Define the first small procurement example and its deterministic price-checking 
 - Test command: `py -m unittest discover -s tests/unit -p "test_*.py" -v`
 - Result: 1 test passed.
 - Limitations: no currency, date, or invalid-input validation yet.
+
+## Backend health endpoint
+
+- Added FastAPI application at `apps/api/app/main.py`.
+- `GET /health/live` returned `{"status":"ok"}` locally.
+- FastAPI generated `/docs`.
+- Unit tests: 2 passed using the project virtual environment.
+- Direct backend and test dependency versions recorded.
+- Limitation: this is a liveness check; it does not check databases or other services.
