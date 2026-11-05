@@ -1,4 +1,4 @@
-﻿"""Focused PostgreSQL checks for the stored synthetic price case."""
+"""Focused PostgreSQL checks for the stored synthetic price case."""
 
 import os
 from decimal import Decimal
@@ -19,6 +19,32 @@ def main() -> None:
     tenant_id = database_id(case["tenant_id"], "TENANT")
     line_id = database_id(case["tenant_id"], case["invoice_line"]["id"])
 
+    from fastapi.testclient import TestClient
+    from unittest.mock import patch
+
+    from apps.api.app.main import app
+
+    client = TestClient(app)
+    with patch.dict(os.environ, {"PROCUREGRAPH_ENABLE_DEMO_DB_API": "1"}):
+        response = client.post(
+            "/api/v1/pricing/cases/assess",
+            json={"tenant_id": str(tenant_id), "invoice_line_id": str(line_id)},
+        )
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.text}"
+        )
+        assert Decimal(response.json()["allowed_unit_price"]) == Decimal("105.00"), response.text
+        assert Decimal(response.json()["excess_amount"]) == Decimal("10.00"), response.text
+        assert response.json()["is_violation"] is True, response.text
+
+        missing = client.post(
+            "/api/v1/pricing/cases/assess",
+            json={"tenant_id": str(UUID(int=0)), "invoice_line_id": str(line_id)},
+        )
+        assert missing.status_code == 404
+        assert missing.json()["error"]["code"] == "CASE_NOT_FOUND"
+
+    print("PASS: demo API assessed stored case and rejected another tenant")
     with psycopg.connect(
         host="127.0.0.1",
         port=int(os.environ["PROCUREGRAPH_DB_PORT"]),

@@ -129,3 +129,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified the seeded case returned an INR 105.00 unit-price limit and INR 10.00 excess. Changing the stored invoice price to INR 108.00 changed the excess to INR 30.00. A different tenant could not retrieve the case, and overlapping active price terms were rejected.
 - All 12 unit tests passed. The temporary Compose resources were removed.
 - The service is not yet exposed through an HTTP endpoint. The current schema's tenant and cross-record guarantees still need review before treating this as a production authorization boundary.
+
+
+### Synthetic database price API
+
+- Added `POST /api/v1/pricing/cases/assess` for a stored synthetic invoice line, enabled locally with `PROCUREGRAPH_ENABLE_DEMO_DB_API=1`.
+- Verified the endpoint returns an INR 105.00 allowed unit price and INR 10.00 excess. A different tenant UUID receives 404. The existing Boolean price-check contract still passes its tests.
+- The unit suite and temporary PostgreSQL integration check passed. The endpoint has no user authentication; its supplied tenant UUID is a lookup filter, not proof of identity. It is disabled unless explicitly enabled for the local synthetic demo.
