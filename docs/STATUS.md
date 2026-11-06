@@ -307,3 +307,12 @@ Define the first small procurement example and its deterministic price-checking 
   `complete`, and missing/conflicting sources `abstained` without a finding.
 - Local unit suite: 81 tests run, 18 skipped. No live multi-service check,
   authentication, checkpointer, approval record, or investigation endpoint yet.
+
+### Sequential investigation integration diagnostic
+
+- Added a staged check that reads current PostgreSQL price and graph sources,
+  verifies the exact MinIO PDF, then runs the bounded investigation with a
+  live Neo4j chain. Each container stops before the next starts.
+- Local unit suite: 86 tests run, 18 skipped. The live Windows Docker result is
+  pending. Stage files are generated in a fresh ignored directory and removed
+  afterward. This diagnostic is not an atomic multi-store snapshot or API.

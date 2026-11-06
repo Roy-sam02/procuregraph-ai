@@ -245,3 +245,21 @@ This graph has a fixed step budget, no LLM, no arbitrary SQL or Cypher, no
 checkpointer, and no approval record. The injected functions are tested offline;
 the live multi-service read adapter, user authorization, and HTTP endpoint are
 future increments. `needs_review` does not mean a human approval was created.
+
+## Sequential live investigation check
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_live_investigation.ps1`
+after the retained PostgreSQL, MinIO, and Neo4j fixtures have passed their
+earlier checks. The script starts PostgreSQL to reassess the invoice line and
+compare its current relationships with the saved graph manifest, then stops it.
+It starts MinIO to read and verify the exact contract PDF version, then stops it.
+Finally it starts Neo4j, checks Bolt readiness and the source-linked invoice
+chain, and runs the bounded workflow using the freshly captured price/PDF
+results and a live graph read. It checks the INR 10.00 violation and that another
+tenant gets no finding. Containers use retained volumes; a fresh ignored
+temporary directory holds stage data and is removed in `finally`.
+
+This staged diagnostic is a low-memory integration check, not an atomic
+snapshot across databases. The live workflow adapter and investigation API
+remain separate future work; no approval record is created. The unit suite
+uses mocked services and does not establish a live result.
