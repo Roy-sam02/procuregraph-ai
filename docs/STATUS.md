@@ -359,3 +359,17 @@ Define the first small procurement example and its deterministic price-checking 
   records return 404; an inconsistent stored shape returns 409.
 - Local unit suite: 97 tests run, 18 skipped. Live Windows PostgreSQL API
   check pending. The demo token is shared, not a tenant-bound user identity.
+
+### Private investigation API live result
+
+- Windows check passed: saved INR 10.00 finding and citations were returned,
+  missing token denied, another tenant saw no finding, and the abstention had
+  no citation. Pushed as `2f36f96`.
+
+### Read-only review queue
+
+- Added a bounded tenant-filtered listing of saved `needs_review` findings,
+  excluding abstentions. The existing live PostgreSQL API check now covers
+  missing token, wrong tenant and an invalid limit.
+- Local unit suite: 101 tests run, 18 skipped. Windows live queue check pending.
+  No approval action or production reviewer identity has been added.

@@ -62,6 +62,24 @@ def main() -> None:
             or abstained.json()["finding"] is not None):
         raise AssertionError("Stored abstention API differs")
     print("PASS: missing token denied; another tenant saw no finding; abstention had no citation")
+    queue_path = "/api/v1/review/queue"
+    if client.get(queue_path, params=params).status_code != 401:
+        raise AssertionError("Review queue accepted a missing token")
+    queue = client.get(queue_path, params={**params, "limit": 1}, headers=headers)
+    if queue.status_code != 200:
+        raise AssertionError(queue.text)
+    items = queue.json()["items"]
+    if (len(items) != 1 or items[0]["id"] != str(finding_id)
+            or items[0]["status"] != "needs_review"
+            or Decimal(items[0]["excess_amount"]) != Decimal("10.00")):
+        raise AssertionError("Review queue did not contain the saved finding")
+    other_queue = client.get(queue_path, params={"tenant_id": str(UUID(int=0))},
+                             headers=headers)
+    if other_queue.status_code != 200 or other_queue.json() != {"items": []}:
+        raise AssertionError("Another tenant saw the review queue")
+    if client.get(queue_path, params={**params, "limit": 21}, headers=headers).status_code != 422:
+        raise AssertionError("Unbounded review queue request was accepted")
+    print("PASS: bounded review queue returned the saved finding, no abstention or other-tenant rows")
 
 
 if __name__ == "__main__":

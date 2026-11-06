@@ -15,11 +15,11 @@ from datasets.generator.export_evidence_locator import read_locator
 from datasets.generator.verify_evidence_locator import read_verified_pdf, verify_stored_evidence
 from decimal import Decimal
 
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, Query
 from pydantic import BaseModel, Field, StrictInt, ValidationError, field_validator, model_validator
 
 from apps.api.app.domain.pricing import is_price_violation
-from apps.api.app.agents.investigation_records import read_investigation
+from apps.api.app.agents.investigation_records import read_investigation, read_review_queue
 from apps.api.app.services.passage_search import search_passages
 from apps.api.app.services.neo4j_graph_api import read_checked_graph
 from apps.api.app.services.passage_rank_fusion import CANDIDATE_LIMIT, fuse_passage_rankings
@@ -208,6 +208,54 @@ class StoredInvestigation(BaseModel):
         if self.finding is None and self.finding_id is not None:
             raise ValueError("Saved finding ID has no finding")
         return self
+
+
+class ReviewQueueItem(BaseModel):
+    id: str
+    invoice_id: str
+    invoice_line_id: str
+    created_at: str
+    finding_id: str
+    rule_id: str
+    currency: str
+    excess_amount: str
+    status: Literal["needs_review"]
+
+
+class ReviewQueueResponse(BaseModel):
+    items: list[ReviewQueueItem]
+
+
+@app.get("/api/v1/review/queue", response_model=ReviewQueueResponse)
+def get_review_queue(
+    tenant_id: UUID, limit: int = Query(default=10, ge=1, le=20),
+    authorization: str | None = Header(default=None),
+):
+    """Private local worklist; a shared demo token is not user authorization."""
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
+        return evidence_error(404, "NOT_FOUND", "Demo review queue is unavailable")
+    token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    if len(token) < 32:
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Demo access is not configured")
+    supplied = authorization.removeprefix("Bearer ") if authorization else ""
+    if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+        supplied, token
+    ):
+        response = evidence_error(401, "UNAUTHORIZED", "A demo evidence token is required")
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    try:
+        with psycopg.connect(
+            host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+            dbname="procuregraph", user="postgres",
+            password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+        ) as connection:
+            rows = read_review_queue(connection, tenant_id, limit)
+        return ReviewQueueResponse.model_validate({"items": rows})
+    except ValidationError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Stored review queue is inconsistent")
+    except (KeyError, ValueError, psycopg.Error):
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
 
 
 @app.get("/api/v1/investigations/{investigation_id}", response_model=StoredInvestigation)

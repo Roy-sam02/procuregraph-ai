@@ -312,3 +312,18 @@ after the verified finding has been persisted. The check starts only retained
 PostgreSQL and reads the saved finding and abstention, then stops it. The shared
 demo token is not bound to a real user or tenant; a production identity and
 authorization layer is still required before exposing this beyond local use.
+
+## Read-only review queue
+
+`GET /api/v1/review/queue?tenant_id=<uuid>&limit=10` lists at most 20 saved
+`needs_review` price violations for the supplied tenant. Each row has an
+investigation ID, finding ID, invoice IDs, rule, currency and excess amount;
+the existing investigation result route provides the full source references.
+The same local demo flag and bearer token are required, and a missing token
+is denied before the database read. The queue excludes abstentions and does
+not create or update any decision. The existing
+`scripts/check_investigation_read_api.ps1` check now verifies the saved INR
+10.00 finding in the queue, the empty other-tenant result and limit rejection.
+
+The demo token is shared and is not tenant-bound authentication. This queue is
+for the local synthetic case, not a production reviewer worklist.

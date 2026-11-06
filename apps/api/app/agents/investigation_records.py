@@ -100,3 +100,26 @@ def read_investigation(connection: Connection, tenant: UUID, investigation_id: U
             "created_by": row[4], "status": row[5], "error_code": row[6],
             "created_at": row[7].isoformat(), "finding_id": str(row[8]) if row[8] else None,
             "finding": row[9]}
+
+
+def read_review_queue(connection: Connection, tenant: UUID, limit: int = 10) -> list[dict]:
+    """List only bounded, verified price violations awaiting human review."""
+    if type(limit) is not int or not 1 <= limit <= 20:
+        raise ValueError("Review queue limit must be between 1 and 20")
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT i.id, i.invoice_id, i.invoice_line_id, i.created_at,
+                   f.id, f.rule_id,
+                   f.evidence_json->>'currency', f.evidence_json->>'excess_amount'
+            FROM investigations i
+            JOIN findings f ON f.investigation_id = i.id
+            WHERE i.tenant_id = %s AND i.status = 'needs_review'
+              AND f.is_violation = TRUE
+            ORDER BY i.created_at DESC, i.id DESC
+            LIMIT %s
+        """, (tenant, limit))
+        rows = cursor.fetchall()
+    return [{"id": str(row[0]), "invoice_id": str(row[1]),
+             "invoice_line_id": str(row[2]), "created_at": row[3].isoformat(),
+             "finding_id": str(row[4]), "rule_id": row[5], "currency": row[6],
+             "excess_amount": row[7], "status": "needs_review"} for row in rows]
