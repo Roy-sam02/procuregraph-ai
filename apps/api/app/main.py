@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictInt, field_validator
 
 from apps.api.app.domain.pricing import is_price_violation
 from apps.api.app.services.passage_search import search_passages
+from apps.api.app.services.neo4j_graph_api import read_checked_graph
 from apps.api.app.services.passage_rank_fusion import CANDIDATE_LIMIT, fuse_passage_rankings
 from apps.api.app.services.qdrant_hash_demo import local_endpoint
 from apps.api.app.services.semantic_embeddings import LocalEncoder
@@ -121,6 +122,71 @@ class PassageHit(BaseModel):
 
 class PassageSearchResponse(BaseModel):
     hits: list[PassageHit]
+
+
+class InvoiceGraphRequest(BaseModel):
+    tenant_id: UUID
+    invoice_id: UUID
+
+
+class GraphNode(BaseModel):
+    label: Literal["Supplier", "Contract", "PurchaseOrder", "Invoice"]
+    id: str
+    tenant_id: str
+    legal_name: str | None = None
+
+
+class GraphEdge(BaseModel):
+    id: str
+    type: Literal["HAS_CONTRACT", "HAS_INVOICE", "REFERENCES_PO", "GOVERNED_BY"]
+    from_id: str
+    to_id: str
+    tenant_id: str
+    source_type: str
+    source_id: str
+    extraction_method: str
+    created_at: str
+
+
+class InvoiceGraph(BaseModel):
+    tenant_id: str
+    invoice_id: str
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+
+
+class InvoiceGraphResponse(BaseModel):
+    chain: InvoiceGraph | None
+
+
+@app.post("/api/v1/graph/invoices/chain", response_model=InvoiceGraphResponse)
+def get_invoice_graph(
+    request: InvoiceGraphRequest, authorization: str | None = Header(default=None),
+):
+    """Private synthetic graph read; the token is not production tenant authorization."""
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
+        return evidence_error(404, "NOT_FOUND", "Demo invoice graph is unavailable")
+    token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    if len(token) < 32:
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Demo graph access is not configured")
+    supplied = authorization.removeprefix("Bearer ") if authorization else ""
+    if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+        supplied, token
+    ):
+        response = evidence_error(401, "UNAUTHORIZED", "A demo evidence token is required")
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    try:
+        chain = read_checked_graph(
+            request.tenant_id, request.invoice_id,
+            os.environ["PROCUREGRAPH_NEO4J_BOLT"],
+            os.environ["PROCUREGRAPH_NEO4J_PASSWORD"],
+        )
+    except ValueError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Graph source failed verification")
+    except (KeyError, OSError, RuntimeError, FileNotFoundError):
+        return evidence_error(503, "GRAPH_UNAVAILABLE", "Demo graph could not be reached")
+    return InvoiceGraphResponse(chain=chain)
 
 
 @app.post("/api/v1/evidence/passages/search", response_model=PassageSearchResponse)

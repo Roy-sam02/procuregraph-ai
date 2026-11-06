@@ -199,3 +199,15 @@ edge source IDs against the saved PostgreSQL-derived manifest before returning
 the graph data. Another tenant receives no result. PostgreSQL and Qdrant stay
 stopped; Neo4j stops after the check. This local read tool does not yet expose
 an HTTP endpoint or recheck PostgreSQL on every graph query.
+
+## Private invoice graph API
+
+The local `POST /api/v1/graph/invoices/chain` route accepts a tenant and invoice
+UUID and returns the fixed graph chain with checked source-table and record IDs.
+It requires the same demo bearer token and feature flag as private passage
+search, plus a loopback Neo4j Bolt endpoint. The existing
+`check_neo4j_invoice_query.ps1` script now checks the API during the same
+Neo4j start, including missing-token and other-tenant requests. No PostgreSQL
+or Qdrant container is needed for this read. The shared token is a local demo
+gate, not per-user authorization; this route covers one synthetic case and
+compares Neo4j against its saved manifest, not live PostgreSQL on each query.

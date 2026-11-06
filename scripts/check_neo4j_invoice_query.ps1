@@ -30,6 +30,8 @@ try {
     $env:PROCUREGRAPH_NEO4J_BOLT = "bolt://127.0.0.1:$($Matches[1])"
     & $python -m datasets.generator.check_neo4j_invoice_query
     if ($LASTEXITCODE -ne 0) { throw 'Read-only invoice graph check failed' }
+    & $python -m datasets.generator.check_neo4j_graph_api
+    if ($LASTEXITCODE -ne 0) { throw 'Private invoice graph API check failed' }
 }
 finally {
     if ($graphStarted) { docker compose -f docker-compose.graph.yml -p procuregraph-graph stop neo4j }
