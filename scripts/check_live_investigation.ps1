@@ -40,6 +40,7 @@ $tempDir = Join-Path '.local-fixtures' ([Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 $priceFile = Join-Path $tempDir 'price.json'
 $pdfFile = Join-Path $tempDir 'pdf.json'
+$resultFile = Join-Path $tempDir 'result.json'
 $pgStarted = $false
 $minioStarted = $false
 $graphStarted = $false
@@ -100,8 +101,32 @@ try {
     $env:PROCUREGRAPH_NEO4J_BOLT = "bolt://127.0.0.1:$($Matches[1])"
     & $python -m datasets.generator.check_neo4j_invoice_query
     if ($LASTEXITCODE -ne 0) { throw 'Neo4j did not become ready or source chain differs' }
-    & $python -m datasets.generator.check_live_investigation finish $priceFile $pdfFile
+    & $python -m datasets.generator.check_live_investigation finish $priceFile $pdfFile $resultFile
     if ($LASTEXITCODE -ne 0) { throw 'Staged live investigation failed' }
+    docker compose -f docker-compose.graph.yml -p procuregraph-graph stop neo4j
+    if ($LASTEXITCODE -ne 0) { throw 'Neo4j could not stop' }
+    $graphStarted = $false
+
+    $pgStarted = $true
+    docker compose -p procuregraph-demo up -d postgres
+    if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL could not restart' }
+    $ready = $false
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+        docker compose -p procuregraph-demo exec -T postgres `
+            pg_isready -h 127.0.0.1 -U postgres -d procuregraph | Out-Null
+        if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $ready) { throw 'PostgreSQL did not become ready after restart' }
+    $address = docker compose -p procuregraph-demo port postgres 5432
+    if ($LASTEXITCODE -ne 0 -or $address -notmatch '^127\.0\.0\.1:(\d+)$') {
+        throw "Unexpected PostgreSQL address: $address"
+    }
+    $env:PROCUREGRAPH_DB_PORT = $Matches[1]
+    & $python -m alembic upgrade head
+    if ($LASTEXITCODE -ne 0) { throw 'Investigation migration failed' }
+    & $python -m datasets.generator.check_live_investigation persist $priceFile $pdfFile $resultFile
+    if ($LASTEXITCODE -ne 0) { throw 'Verified finding persistence failed' }
 }
 finally {
     if ($graphStarted) { docker compose -f docker-compose.graph.yml -p procuregraph-graph stop neo4j }

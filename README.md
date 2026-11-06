@@ -280,3 +280,19 @@ abstention. It writes one synthetic row with a stable key, checks the tenant
 filter, and stops PostgreSQL while preserving its volume. This check does not
 claim to persist a new live verified finding. No HTTP endpoint, real user
 authentication, approval event, or immutable database permission is added.
+
+## Persist the checked live finding
+
+The sequential `check_live_investigation.ps1` now captures the verified finding
+and the live Neo4j chain in a fresh ignored temporary directory. After Neo4j
+stops, it restarts PostgreSQL, checks that the current price assessment,
+document locator, and graph manifest still match the staged sources, and runs
+the evidence gate again. It then stores the `needs_review` finding once under
+a stable local idempotency key and checks that another tenant cannot read it.
+The saved finding includes the document version, SHA-256, clauses, and four
+source-linked graph edge IDs. All containers stop and temporary files are
+removed after the check; the PostgreSQL row remains in its retained volume.
+
+This is a staged local diagnostic. It is not an atomic cross-store transaction,
+an authenticated investigation API, or a human approval. The `needs_review`
+status does not mean a payment decision was approved.

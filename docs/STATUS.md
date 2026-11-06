@@ -331,3 +331,17 @@ Define the first small procurement example and its deterministic price-checking 
   content and returns the same ID for an identical retry.
 - Local unit suite: 91 tests run, 18 skipped. Live Windows PostgreSQL migration
   and repeat check remain pending. No investigation HTTP route or approval event.
+
+### Investigation storage live check
+
+- Windows PostgreSQL check passed: an abstained run persisted with one stable ID
+  on retry; another tenant saw no run, and changed content could not reuse its
+  key. Pushed as `572bd86`.
+
+### Verified live finding persistence
+
+- The staged diagnostic now reopens PostgreSQL after Neo4j stops, rechecks its
+  current price and graph sources against the captured PDF/graph evidence, and
+  records the verified INR 10.00 finding once. It tests repeat and tenant reads.
+- Local unit suite: 93 tests run, 18 skipped. The live Windows sequential check
+  is pending. No investigation endpoint or human approval has been added.
