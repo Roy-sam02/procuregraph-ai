@@ -50,5 +50,13 @@ reads the exact MinIO PDF version, and writes
 passage for each of clauses 2.1, 2.2, and 2.3, with tenant, document/version,
 page, clause, SHA-256 values, and offsets into normalized page text. A repeat
 run checks that the manifest is identical and does not rewrite it. This is an
-offline fixture for the next retrieval step; it does not yet store chunks in
-PostgreSQL or index them in Qdrant.
+offline fixture used by the next retrieval step.
+
+Alembic revision `0006_document_chunks` creates append-only source-linked
+passages and a PostgreSQL full-text index. The local check re-verifies the
+MinIO PDF, compares the regenerated passages with the manifest, registers the
+three rows in one database transaction, repeats registration to check
+idempotence, and searches within the demo tenant. Search is bounded to 1–10
+results and uses the latest document version for a contract. This is a
+PostgreSQL lexical baseline; Qdrant, retrieval benchmarks, and a public
+search API remain future work.

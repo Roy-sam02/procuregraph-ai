@@ -203,3 +203,11 @@ Define the first small procurement example and its deterministic price-checking 
 - The local check exports the PostgreSQL source locator, reads and verifies the exact MinIO object version, then writes an idempotent passage manifest in .local-fixtures.
 - All 34 local unit tests passed with the project PDF parser. The live Windows check wrote three page-1 passages from the saved database and MinIO volumes; both containers stopped afterward.
 - The passages are not yet stored in PostgreSQL or indexed in Qdrant.
+
+### PostgreSQL passage storage and lexical search
+
+- Added Alembic revision 0006 for append-only, source-linked document chunks and a PostgreSQL full-text index.
+- Registration re-reads the database-linked MinIO PDF, verifies its bytes, regenerates the three passages, and compares them with the manifest before writing rows in one transaction.
+- Added bounded, tenant-scoped lexical search over the latest contract document version.
+- All 37 local unit tests passed. The live Windows check registered three chunks; repeat registration changed no rows. Search returned clauses 2.2 and 2.3, a different tenant received no results, and PostgreSQL rejected an update. Both containers stopped afterward.
+- This is the PostgreSQL lexical baseline. Qdrant indexing, retrieval benchmarks, and an HTTP search endpoint remain pending.

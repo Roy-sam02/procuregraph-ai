@@ -74,6 +74,17 @@ try {
         '.local-fixtures\evidence_locator.json' '.local-fixtures\contract_passages_v1.json' `
         --endpoint $env:PROCUREGRAPH_MINIO_ENDPOINT
     if ($LASTEXITCODE -ne 0) { throw 'Verified passage build failed' }
+
+    & $python -m alembic upgrade head
+    if ($LASTEXITCODE -ne 0) { throw 'Chunk migration failed' }
+    & $python -m datasets.generator.register_contract_passages `
+        '.local-fixtures\contract_passages_v1.json' --endpoint $env:PROCUREGRAPH_MINIO_ENDPOINT
+    if ($LASTEXITCODE -ne 0) { throw 'Chunk registration failed' }
+    & $python -m datasets.generator.register_contract_passages `
+        '.local-fixtures\contract_passages_v1.json' --endpoint $env:PROCUREGRAPH_MINIO_ENDPOINT
+    if ($LASTEXITCODE -ne 0) { throw 'Repeat chunk registration failed' }
+    & $python -m apps.api.app.services.check_passage_search
+    if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL passage search check failed' }
 }
 finally {
     if ($minioStarted) {
