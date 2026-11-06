@@ -261,3 +261,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Live Windows results (R@1 / R@5 / MRR@10 / nDCG@10): PostgreSQL 0.375 / 0.375 / 0.375 / 0.375; Qdrant 0.938 / 0.969 / 0.958 / 0.968; fusion 0.938 / 0.969 / 0.958 / 0.968.
 - Fusion matched semantic retrieval on this fixture; it did not improve these measured scores. These synthetic passages are not verified contract citations, and this diagnostic does not establish real-world retrieval quality.
 - The benchmark ran PostgreSQL and Qdrant sequentially and stopped both afterward, retaining their volumes.
+
+### Price-case graph source manifest
+
+- Added a read-only, tenant-scoped PostgreSQL export of four canonical price-case nodes and four checked foreign-key relationships. Each proposed edge records its source table and record ID.
+- The Windows unit suite passed: 60 tests run, 18 skipped.
+- The live Windows check found the existing graph manifest unchanged on both runs; another tenant could not retrieve the invoice-line graph source.
+- PostgreSQL stopped afterward and its volume was retained. This is a source manifest for a later Neo4j import; Neo4j has not been populated by this step.

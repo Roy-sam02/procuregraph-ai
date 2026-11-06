@@ -162,3 +162,15 @@ MRR@10 and nDCG@10 for lexical, semantic, and fused rankings. Its fusion
 latency is an estimate from sequential lexical and Qdrant query times plus
 local fusion time, excluding query embedding; it is not end-to-end API latency.
 The benchmark passages are isolated synthetic labels, not verified PDF citations.
+
+## Price-case graph source manifest
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_graph_manifest.ps1`
+to export four canonical nodes (supplier, contract, purchase order, invoice)
+and four checked foreign-key edges from the saved tenant-scoped PostgreSQL
+price case. Each edge records the owning database table and source record ID.
+The read-only export refuses inconsistent links, another tenant, and changed
+content on a repeat run. It stores the local manifest in
+`.local-fixtures/price_case_graph_manifest_v1.json` and stops PostgreSQL while
+retaining its volume. This is an input for a later Neo4j import; no graph
+database has been populated yet. The import will assign edge creation times.
