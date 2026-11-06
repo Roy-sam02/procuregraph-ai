@@ -373,3 +373,17 @@ Define the first small procurement example and its deterministic price-checking 
   missing token, wrong tenant and an invalid limit.
 - Local unit suite: 101 tests run, 18 skipped. Windows live queue check pending.
   No approval action or production reviewer identity has been added.
+
+### Review queue live result
+
+- Windows check passed: bounded queue returned the saved INR 10.00 finding,
+  excluded the abstention, and showed no rows for another tenant. Pushed as
+  `9dba4ca`.
+
+### First React review screen
+
+- Added a read-only React/TypeScript local review view with queue selection,
+  saved finding detail, source IDs, and loading/error/empty states.
+- Local `npm ci` and TypeScript/Vite production build passed. Windows Node
+  install and interactive browser check are pending. No approval flow, PDF
+  viewer, graph visualization, or production authentication has been added.

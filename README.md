@@ -327,3 +327,26 @@ not create or update any decision. The existing
 
 The demo token is shared and is not tenant-bound authentication. This queue is
 for the local synthetic case, not a production reviewer worklist.
+
+## First React review screen
+
+`apps/web` is a local React + TypeScript view of the saved synthetic price
+finding. It reads the review queue, then the selected investigation detail;
+it shows the allowed and invoiced prices, calculated excess, contract document
+version/hash/clauses, and four graph edge IDs. It has loading, error, and empty
+states. The access token is typed into the page and kept only in React memory,
+so a refresh clears it. The Vite development proxy sends `/api` to loopback
+FastAPI without a cross-origin browser configuration.
+
+Install Node.js compatible with Vite, then run `npm.cmd ci --prefix apps/web`
+and `npm.cmd run build --prefix apps/web`. For the local interactive demo, run
+`powershell -ExecutionPolicy Bypass -File scripts/start_review_demo.ps1` from
+the repository root. That script starts only PostgreSQL, FastAPI and the Vite
+development server. Open `http://127.0.0.1:5173`, paste the local token printed
+in the same terminal, and press Ctrl+C there to stop the processes and
+PostgreSQL. Keep the token private. The UI is bound to synthetic tenant DEMO-001
+and cannot approve, edit, pay, or contact a supplier.
+
+This is a read-only local prototype, not a production login or tenant-bound
+authorization scheme. It displays source identifiers rather than opening PDF
+pages or drawing an interactive graph; those views remain later work.
