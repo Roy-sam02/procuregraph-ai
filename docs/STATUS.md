@@ -160,3 +160,17 @@ Define the first small procurement example and its deterministic price-checking 
 - A repeat attachment changed no rows. PostgreSQL rejected an update to the immutable document record.
 - The local demo started successfully on retry after attachment; its existing API returned the INR 105 limit and INR 10 excess. The first startup attempt timed out, with no error captured in its logs.
 - `storage_backend=fixture` has no object key or served citation. The PDF is local test input; MinIO upload, content recheck on retrieval, and a source-serving citation are future increments.
+
+### MinIO PDF storage exercise
+
+- Added a separate Compose service for one local MinIO container with a retained volume. The image was resolved to a digest for the live run.
+- Enabled bucket versioning, uploaded the checked CON-001 PDF, and read back the specific stored object version. The downloaded bytes matched SHA-256 `4ae87579a28b27d62cf9d92a5f99876bb03b069baa5576bb2dd7d74406d57b0f`.
+- A repeat run found the existing object and returned the same MinIO version ID. The 19-test unit suite and the live upload/readback check passed.
+
+### MinIO location linked to document v1
+
+- Added Alembic revision 0005 for an append-only MinIO object location linked to the existing document v1. The original fixture document row was not rewritten.
+- A local receipt carried the bucket, object key, MinIO version ID, and SHA-256 after readback. MinIO was stopped before PostgreSQL was started.
+- Verified PostgreSQL linked the location to document v1 and its page 1 price clauses. A repeat registration changed no rows, and PostgreSQL rejected an update to the location.
+- The 21-test unit suite passed. Both local container checks passed sequentially, and their named volumes were retained.
+- The receipt is a local handoff for this synthetic demo. The API does not yet fetch and recheck the object when serving evidence, so it does not yet provide a verified citation. A revised contract PDF will need version-aware price-term evidence links.
