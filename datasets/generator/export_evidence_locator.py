@@ -5,6 +5,7 @@ import json
 import os
 from decimal import Decimal
 from pathlib import Path
+from uuid import UUID
 
 import psycopg
 
@@ -13,16 +14,13 @@ from datasets.generator.register_minio_location import validate_receipt
 from datasets.generator.seed_price_case import database_id
 
 
-def export_locator(output: Path) -> dict:
+def read_locator(connection: psycopg.Connection, requested_tenant: UUID, requested_line: UUID) -> dict:
+    """Read the source linked to the assessed price term within its tenant."""
     def identifier(label):
         return database_id("DEMO-001", label)
 
-    with psycopg.connect(
-        host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
-        dbname="procuregraph", user="postgres", password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
-    ) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("""
+    with connection.cursor() as cursor:
+        cursor.execute("""
                 SELECT d.id, d.tenant_id, d.contract_id, d.version, d.sha256,
                        d.mime, d.page_count, d.storage_backend, d.object_key,
                        l.bucket, l.object_key, l.object_version_id, l.sha256,
@@ -37,8 +35,8 @@ def export_locator(output: Path) -> dict:
                     AND d.contract_id = c.id AND d.tenant_id = s.tenant_id
                 JOIN document_object_locations l ON l.document_id = d.id
                 WHERE cl.id = %s AND s.tenant_id = %s
-            """, (identifier("CL-001"), identifier("TENANT")))
-            rows = cursor.fetchall()
+        """, (requested_line, requested_tenant))
+        rows = cursor.fetchall()
     if len(rows) != 1:
         raise ValueError("Expected one linked document for this tenant and price term")
     (doc_id, tenant_id, contract_id, version, sha, mime, pages, backend, doc_key,
@@ -57,6 +55,8 @@ def export_locator(output: Path) -> dict:
     validate_receipt({"bucket": bucket, "object_key": key,
                       "object_version_id": object_version, "sha256": object_sha,
                       "document_version": version})
+    if requested_tenant != identifier("TENANT") or requested_line != identifier("CL-001"):
+        raise ValueError("Requested price term has no verified synthetic source")
     locator = {
         "tenant_id": str(tenant_id), "contract_id": str(contract_id),
         "contract_line_id": str(line_id), "document_id": str(doc_id),
@@ -66,6 +66,17 @@ def export_locator(output: Path) -> dict:
         "tolerance_clause": tolerance_clause, "dates_clause": dates_clause,
         "max_unit_price": str(price), "tolerance_pct": str(tolerance), "currency": currency,
     }
+    return locator
+
+
+def export_locator(output: Path) -> dict:
+    with psycopg.connect(
+        host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+        dbname="procuregraph", user="postgres", password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+    ) as connection:
+        locator = read_locator(
+            connection, database_id("DEMO-001", "TENANT"), database_id("DEMO-001", "CL-001")
+        )
     if output.exists():
         if json.loads(output.read_text(encoding="utf-8")) != locator:
             raise ValueError("Existing locator differs; it was not overwritten")

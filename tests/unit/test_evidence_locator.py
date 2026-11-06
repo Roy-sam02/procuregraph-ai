@@ -50,7 +50,8 @@ class EvidenceLocatorTests(unittest.TestCase):
 
             def get_object(self, **kwargs):
                 self.call = kwargs
-                return {"Body": BytesIO(self.body), "ContentType": "application/pdf"}
+                return {"Body": BytesIO(self.body), "ContentType": "application/pdf",
+                        "VersionId": self.call["VersionId"]}
 
         good = FakeS3(pdf)
         with patch("datasets.generator.verify_evidence_locator.boto3.client", return_value=good), patch.dict(os.environ, {

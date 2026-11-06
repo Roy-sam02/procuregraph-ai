@@ -182,3 +182,10 @@ Define the first small procurement example and its deterministic price-checking 
 - The 24-test unit suite passed against the actual synthetic PDF, including changed-byte, incorrect-clause, and wrong-tenant checks.
 - The live check passed with PostgreSQL and MinIO run sequentially. Both containers were stopped afterward and their saved volumes retained.
 - This is a local synthetic evidence check. The API does not yet retrieve the PDF or serve a verified citation to callers.
+
+### Verified source reference in the synthetic price API
+
+- Added an opt-in include_verified_evidence field to the stored price assessment API. It reads the tenant-scoped source, retrieves the exact MinIO object version, and checks the PDF hash, page, and clauses before returning a source reference.
+- A plain assessment has no citation. An unavailable or inconsistent source returns an error without a citation.
+- The 28-test unit suite passed against the synthetic PDF. The live API check passed on the saved PostgreSQL and MinIO volumes: verified reference returned, plain assessment had no citation, and a different tenant received no source. Both containers were stopped afterward.
+- The reference identifies the private PDF; it is not a download URL. The demo does not yet authenticate users.
