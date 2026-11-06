@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from apps.api.app.main import app
-from apps.api.app.services.passage_rank_fusion import fuse_passage_rankings
+from apps.api.app.services.passage_rank_fusion import fuse_passage_rankings, fuse_ranked_ids
 
 
 def hit(source_id: str, method: str) -> dict:
@@ -50,6 +50,13 @@ class PassageRankFusionTests(unittest.TestCase):
         for limit in (0, 11, True):
             with self.assertRaises(ValueError):
                 fuse_passage_rankings([], [], limit)
+
+    def test_id_only_fusion_uses_same_ranks_as_passage_api(self):
+        ranked = fuse_ranked_ids(["B01", "B02"], ["B02", "B03"], 3)
+        self.assertEqual([source_id for source_id, _ in ranked], ["B02", "B01", "B03"])
+        self.assertAlmostEqual(ranked[0][1], 1 / 62 + 1 / 61)
+        with self.assertRaises(ValueError):
+            fuse_ranked_ids(["B01", "B01"], [], 5)
 
     def test_api_requires_token_and_uses_ten_candidates_per_source(self):
         client = TestClient(app)

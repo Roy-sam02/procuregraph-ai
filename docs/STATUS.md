@@ -254,3 +254,10 @@ Define the first small procurement example and its deterministic price-checking 
 - The Windows unit suite passed: 56 tests run, 18 skipped.
 - The live Windows check returned one PostgreSQL-backed clause 2.2 source from fusion. The missing token was denied, and another tenant received no semantic or fused hits.
 - PostgreSQL and Qdrant stopped after the check; their volumes were retained. This three-clause live check does not establish broad retrieval quality. The separate synthetic benchmark passages are not verified contract citations.
+
+### Locked synthetic rank-fusion comparison
+
+- Evaluated PostgreSQL lexical, BGE-small Qdrant, and `rrf_60` rankings on the same locked set of 16 synthetic passages and 32 labeled queries.
+- Live Windows results (R@1 / R@5 / MRR@10 / nDCG@10): PostgreSQL 0.375 / 0.375 / 0.375 / 0.375; Qdrant 0.938 / 0.969 / 0.958 / 0.968; fusion 0.938 / 0.969 / 0.958 / 0.968.
+- Fusion matched semantic retrieval on this fixture; it did not improve these measured scores. These synthetic passages are not verified contract citations, and this diagnostic does not establish real-world retrieval quality.
+- The benchmark ran PostgreSQL and Qdrant sequentially and stopped both afterward, retaining their volumes.

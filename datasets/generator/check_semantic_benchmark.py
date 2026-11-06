@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 from apps.api.app.services.qdrant_hash_demo import request_json
+from apps.api.app.services.passage_rank_fusion import fuse_ranked_ids
 from apps.api.app.services.retrieval_benchmark import (
     fixture_sha256, latency_summary, load_fixture, score_queries,
 )
@@ -40,6 +41,14 @@ def check(fixture_path: Path, lexical_path: Path, report_path: Path,
                    (item["text"], item["gold"], item["kind"])
                    for row, item in zip(lexical["queries"], fixture["queries"]))):
         raise ValueError("PostgreSQL results do not match the locked fixture")
+    passage_ids = {p["id"] for p in fixture["passages"]}
+    for row in lexical["queries"]:
+        ids = row.get("postgres_ids")
+        if (not isinstance(ids, list) or len(ids) > 10
+                or any(not isinstance(source_id, str) or source_id not in passage_ids
+                       for source_id in ids)
+                or len(ids) != len(set(ids))):
+            raise ValueError("PostgreSQL ranking contains invalid benchmark IDs")
     encoder = encoder or LocalEncoder(cache_dir)
     started = time.perf_counter()
     doc_vectors = encoder.encode([p["text"] for p in fixture["passages"]])
@@ -105,7 +114,14 @@ def check(fixture_path: Path, lexical_path: Path, report_path: Path,
             if wanted is None or hit["payload"] != wanted["payload"]:
                 raise ValueError("Semantic result lacks the expected source payload")
             dense_ids.append(wanted["payload"]["passage_id"])
-        evaluations.append({**item, "dense_ids": dense_ids, "dense_query_ms": query_ms})
+        if len(dense_ids) != len(set(dense_ids)):
+            raise ValueError("Qdrant ranking contains duplicate benchmark IDs")
+        started = time.perf_counter()
+        fused_ids = [source_id for source_id, _ in
+                     fuse_ranked_ids(item["postgres_ids"], dense_ids, 10)]
+        fusion_ms = (time.perf_counter() - started) * 1000
+        evaluations.append({**item, "dense_ids": dense_ids, "dense_query_ms": query_ms,
+                            "rrf_ids": fused_ids, "fusion_ms": fusion_ms})
     other = request_json(endpoint, "POST", f"{path}/points/query", {
         "query": query_vectors[0], "filter": {"must": [
             {"key": "dataset_id", "match": {"value": fixture["dataset_id"]}},
@@ -125,20 +141,28 @@ def check(fixture_path: Path, lexical_path: Path, report_path: Path,
                          "query_latency": latency_summary([q["postgres_query_ms"] for q in evaluations])},
         "qdrant_dense": {"metrics": score_queries(evaluations, "dense_ids"),
                          "query_latency_excluding_embedding": latency_summary([q["dense_query_ms"] for q in evaluations])},
+        "rrf_60": {"metrics": score_queries(evaluations, "rrf_ids"),
+                   "estimated_sequential_latency_excluding_embedding": latency_summary([
+                       q["postgres_query_ms"] + q["dense_query_ms"] + q["fusion_ms"]
+                       for q in evaluations])},
         "failures_at_1": [{"query": q["text"], "gold": q["gold"], "kind": q["kind"],
                            "postgres_top1": q["postgres_ids"][0] if q["postgres_ids"] else None,
-                           "dense_top1": q["dense_ids"][0] if q["dense_ids"] else None}
+                           "dense_top1": q["dense_ids"][0] if q["dense_ids"] else None,
+                           "rrf_top1": q["rrf_ids"][0] if q["rrf_ids"] else None}
                           for q in evaluations if not q["postgres_ids"] or q["postgres_ids"][0] != q["gold"]
-                          or not q["dense_ids"] or q["dense_ids"][0] != q["gold"]],
+                          or not q["dense_ids"] or q["dense_ids"][0] != q["gold"]
+                          or not q["rrf_ids"] or q["rrf_ids"][0] != q["gold"]],
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"PASS: evaluated {len(points)} synthetic passages and {len(evaluations)} labeled queries")
     print("PASS: tenant filter returned no points for another tenant; comparison report saved")
-    print("PostgreSQL Recall@5: {:.3f}; semantic Qdrant Recall@5: {:.3f}".format(
-        report["postgres_fts"]["metrics"]["all"]["recall_at_5"],
-        report["qdrant_dense"]["metrics"]["all"]["recall_at_5"],
-    ))
+    for name in ("postgres_fts", "qdrant_dense", "rrf_60"):
+        metrics = report[name]["metrics"]["all"]
+        print("{}: R@1={:.3f} R@5={:.3f} MRR@10={:.3f} nDCG@10={:.3f}".format(
+            name, metrics["recall_at_1"], metrics["recall_at_5"],
+            metrics["mrr_at_10"], metrics["ndcg_at_10"],
+        ))
     return report
 
 

@@ -150,3 +150,15 @@ The existing token, tenant, and document-version checks still apply. Run
 `powershell -ExecutionPolicy Bypass -File scripts/check_semantic_passage_api.ps1`
 to check the fused mode against the saved synthetic demo, then stop both
 containers. This three-clause check is not a broad retrieval evaluation.
+
+## Locked synthetic rank-fusion comparison
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_semantic_benchmark.ps1`
+to compare PostgreSQL full-text ranking, BGE-small Qdrant ranking, and the same
+`rrf_60` ID-ranking formula used by the private API on the locked 16-passage,
+32-query synthetic fixture. The report in
+`.local-fixtures/semantic_benchmark_report_v1.json` includes Recall@1/5,
+MRR@10 and nDCG@10 for lexical, semantic, and fused rankings. Its fusion
+latency is an estimate from sequential lexical and Qdrant query times plus
+local fusion time, excluding query embedding; it is not end-to-end API latency.
+The benchmark passages are isolated synthetic labels, not verified PDF citations.

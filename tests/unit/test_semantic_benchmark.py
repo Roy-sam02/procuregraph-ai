@@ -97,6 +97,8 @@ class SemanticBenchmarkTests(unittest.TestCase):
                 self.assertEqual(report["queries"], 32)
                 self.assertEqual(report["qdrant_dense"]["metrics"]["all"]["recall_at_1"], 1)
                 self.assertEqual(report["postgres_fts"]["metrics"]["all"]["recall_at_5"], 1)
+                self.assertEqual(report["rrf_60"]["metrics"]["all"]["recall_at_1"], 1)
+                self.assertIn("estimated_sequential_latency_excluding_embedding", report["rrf_60"])
                 self.assertEqual(report["failures_at_1"], [])
                 self.assertEqual(json.loads(report_path.read_text())["fixture_sha256"], fixture_sha256(FIXTURE))
                 self.assertEqual(len(state["points"]), 16)
