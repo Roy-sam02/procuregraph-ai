@@ -196,3 +196,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Missing or wrong tokens are rejected before database or storage access. Changed PDF bytes return no PDF. The response prevents caching.
 - All 31 unit tests passed against the synthetic PDF. The live check passed on the saved PostgreSQL and MinIO volumes: verified bytes returned with a token, missing and wrong tokens were denied, and a different tenant received no source. Both containers were stopped afterward.
 - The shared demo token is not user authentication or role-based tenant authorization. This route is for the local synthetic demo only.
+
+### Verified contract clause passages
+
+- Added deterministic extraction of clauses 2.1, 2.2, and 2.3 from the verified synthetic contract PDF. Each passage records a stable ID, tenant, document version, page, clause, source and text hashes, and offsets into normalized page text.
+- The local check exports the PostgreSQL source locator, reads and verifies the exact MinIO object version, then writes an idempotent passage manifest in .local-fixtures.
+- All 34 local unit tests passed with the project PDF parser. The live Windows check wrote three page-1 passages from the saved database and MinIO volumes; both containers stopped afterward.
+- The passages are not yet stored in PostgreSQL or indexed in Qdrant.

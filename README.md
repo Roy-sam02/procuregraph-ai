@@ -41,3 +41,14 @@ exercise the real API route and token-gated PDF download with both containers
 briefly running. The script generates a temporary token in its Python process,
 then stops the containers and retains their volumes. To use the download route
 from a separately started API, configure a token in that API process.
+
+## Clause passages for retrieval
+
+The same local check now exports the tenant-scoped PostgreSQL source locator,
+reads the exact MinIO PDF version, and writes
+`.local-fixtures/contract_passages_v1.json`. It contains one deterministic
+passage for each of clauses 2.1, 2.2, and 2.3, with tenant, document/version,
+page, clause, SHA-256 values, and offsets into normalized page text. A repeat
+run checks that the manifest is identical and does not rewrite it. This is an
+offline fixture for the next retrieval step; it does not yet store chunks in
+PostgreSQL or index them in Qdrant.

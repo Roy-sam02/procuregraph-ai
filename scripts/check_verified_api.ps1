@@ -67,6 +67,13 @@ try {
 
     & $python -m apps.api.app.services.check_verified_api
     if ($LASTEXITCODE -ne 0) { throw 'Verified evidence API check failed' }
+
+    & $python -m datasets.generator.export_evidence_locator '.local-fixtures\evidence_locator.json'
+    if ($LASTEXITCODE -ne 0) { throw 'Stored source locator export failed' }
+    & $python -m datasets.generator.build_contract_passages `
+        '.local-fixtures\evidence_locator.json' '.local-fixtures\contract_passages_v1.json' `
+        --endpoint $env:PROCUREGRAPH_MINIO_ENDPOINT
+    if ($LASTEXITCODE -ne 0) { throw 'Verified passage build failed' }
 }
 finally {
     if ($minioStarted) {
