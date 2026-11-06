@@ -282,3 +282,19 @@ Define the first small procurement example and its deterministic price-checking 
 - The Windows unit suite passed: 68 tests run, 18 skipped.
 - The live Windows check returned four source-linked edges; another tenant received no graph chain. Neo4j needed more than 150 readiness checks on this laptop, so the check now allows up to 240 and prints progress.
 - Neo4j stopped afterward with its volume retained. This is a local read tool, not yet an HTTP endpoint; PostgreSQL is not reread during each graph query.
+
+### Private invoice graph API
+
+- The Windows check passed: the token-protected route returned four checked
+  graph edges; a missing token was denied and another tenant saw no chain.
+- Pushed as `c56c650`. The route compares against its saved PostgreSQL manifest,
+  not a fresh database read on each request.
+
+### Investigation price evidence gate
+
+- Added a pure read-only verifier that cross-checks the stored price assessment,
+  exact document version and clauses, and the checked four-edge invoice chain.
+- It independently recalculates price arithmetic and refuses a finding if a
+  tenant, source identity, PDF hash, graph edge, or amount disagrees.
+- Local unit suite: 76 tests run, 18 skipped. Live Windows integration remains
+  to be checked; this step adds no LangGraph runtime or investigation API.

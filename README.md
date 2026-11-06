@@ -211,3 +211,19 @@ Neo4j start, including missing-token and other-tenant requests. No PostgreSQL
 or Qdrant container is needed for this read. The shared token is a local demo
 gate, not per-user authorization; this route covers one synthetic case and
 compares Neo4j against its saved manifest, not live PostgreSQL on each query.
+
+## Price evidence gate for investigations
+
+`apps/api/app/agents/price_evidence.py` provides a pure, read-only verifier for
+the synthetic price case. It accepts a tenant-scoped PostgreSQL assessment and
+locator, a `VerifiedFixture` produced by reading and checking the exact MinIO
+PDF version, and the manifest-checked Neo4j invoice chain. It recalculates the
+allowed price and excess with Decimal, checks that the document, invoice,
+supplier, contract and graph-edge sources agree, and returns a typed finding
+with document clauses and graph edge IDs. Missing or conflicting evidence raises
+`ValueError`; no finding is emitted. Run the local check with
+`python -m unittest tests.unit.test_price_evidence_verifier -v`.
+
+This gate does not itself fetch sources or authenticate a user. Its caller must
+use the existing tenant-scoped read tools and verified PDF reader. It is not
+yet a LangGraph workflow, investigation endpoint, or human approval system.
