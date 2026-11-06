@@ -1,0 +1,16 @@
+# Local synthetic exercise only. Start this file on its own, without PostgreSQL.
+services:
+  minio:
+    image: "${PROCUREGRAPH_MINIO_IMAGE:?Set pinned image digest}"
+    command: server /data --address ":9000"
+    mem_limit: 512m
+    environment:
+      MINIO_ROOT_USER: "${PROCUREGRAPH_MINIO_USER:?Set PROCUREGRAPH_MINIO_USER}"
+      MINIO_ROOT_PASSWORD: "${PROCUREGRAPH_MINIO_PASSWORD:?Set PROCUREGRAPH_MINIO_PASSWORD}"
+    ports:
+      - "127.0.0.1::9000"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  minio_data:
