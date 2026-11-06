@@ -225,5 +225,23 @@ with document clauses and graph edge IDs. Missing or conflicting evidence raises
 `python -m unittest tests.unit.test_price_evidence_verifier -v`.
 
 This gate does not itself fetch sources or authenticate a user. Its caller must
-use the existing tenant-scoped read tools and verified PDF reader. It is not
-yet a LangGraph workflow, investigation endpoint, or human approval system.
+use the existing tenant-scoped read tools and verified PDF reader. The gate
+itself is not a workflow, investigation endpoint, or human approval system.
+
+## Bounded investigation workflow
+
+Install the optional agent runtime with
+`python -m pip install -r apps/api/requirements-agent.txt`. The read-only
+`apps/api/app/agents/investigation_workflow.py` LangGraph has four fixed nodes:
+price read, PDF check, graph read, and evidence check. A trusted caller supplies
+three existing source-checking read functions through `InvestigationReads`; the
+graph passes their raw results to the price evidence gate. It stops on a failed
+source and returns an `abstained` result without a finding. A verified price
+violation returns `needs_review`; a verified non-violation returns `complete`.
+Run `python -m unittest tests.unit.test_investigation_workflow -v` to see all
+three paths without starting containers.
+
+This graph has a fixed step budget, no LLM, no arbitrary SQL or Cypher, no
+checkpointer, and no approval record. The injected functions are tested offline;
+the live multi-service read adapter, user authorization, and HTTP endpoint are
+future increments. `needs_review` does not mean a human approval was created.

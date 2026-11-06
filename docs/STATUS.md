@@ -298,3 +298,12 @@ Define the first small procurement example and its deterministic price-checking 
   tenant, source identity, PDF hash, graph edge, or amount disagrees.
 - Local unit suite: 76 tests run, 18 skipped. Live Windows integration remains
   to be checked; this step adds no LangGraph runtime or investigation API.
+
+### Bounded investigation workflow
+
+- Added a LangGraph state machine with four fixed read/verify nodes, injected
+  read-only source functions, and early stop on source errors.
+- A consistent violation yields `needs_review`, a consistent non-violation
+  `complete`, and missing/conflicting sources `abstained` without a finding.
+- Local unit suite: 81 tests run, 18 skipped. No live multi-service check,
+  authentication, checkpointer, approval record, or investigation endpoint yet.
