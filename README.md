@@ -174,3 +174,17 @@ content on a repeat run. It stores the local manifest in
 `.local-fixtures/price_case_graph_manifest_v1.json` and stops PostgreSQL while
 retaining its volume. This is an input for a later Neo4j import; no graph
 database has been populated yet. The import will assign edge creation times.
+
+## Local Neo4j price-case graph
+
+Install `apps/api/requirements-graph.txt`, then run
+`powershell -ExecutionPolicy Bypass -File scripts/check_neo4j_price_graph.ps1`.
+The script rechecks the graph manifest against PostgreSQL and stops PostgreSQL
+before starting a separate loopback-only Neo4j container. On first run it
+generates a local password in ignored `.env`; Docker retains the graph volume.
+The import validates four canonical nodes and four relationship types before
+writing, creates tenant-aware uniqueness constraints, stores source table/ID
+provenance and edge creation times, and refuses mismatched existing records.
+It reconciles the graph twice, checks another tenant, then stops Neo4j.
+The first image download may be large. This graph currently covers one
+synthetic price case, not arbitrary procurement records or verified PDF clauses.

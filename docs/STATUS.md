@@ -268,3 +268,10 @@ Define the first small procurement example and its deterministic price-checking 
 - The Windows unit suite passed: 60 tests run, 18 skipped.
 - The live Windows check found the existing graph manifest unchanged on both runs; another tenant could not retrieve the invoice-line graph source.
 - PostgreSQL stopped afterward and its volume was retained. This is a source manifest for a later Neo4j import; Neo4j has not been populated by this step.
+
+### Local Neo4j price-case graph
+
+- Added a separate, retained Neo4j container and a validated import of the tenant-scoped PostgreSQL price-case graph manifest.
+- The live Windows check reverified the PostgreSQL manifest, imported 4 nodes and 4 source-linked edges into Neo4j, and found no changes on a repeat import (0 nodes, 0 edges).
+- A different tenant found no graph nodes. PostgreSQL stopped before Neo4j started; Neo4j stopped after verification, with both volumes retained.
+- This graph covers one synthetic price case. It is not yet a graph query API or a general procurement graph.
