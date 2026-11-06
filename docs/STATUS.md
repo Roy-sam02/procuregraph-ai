@@ -316,3 +316,18 @@ Define the first small procurement example and its deterministic price-checking 
 - Local unit suite: 86 tests run, 18 skipped. The live Windows Docker result is
   pending. Stage files are generated in a fresh ignored directory and removed
   afterward. This diagnostic is not an atomic multi-store snapshot or API.
+
+### Staged live investigation result
+
+- Windows check passed: current PostgreSQL source, exact MinIO PDF and Neo4j
+  chain produced a verified INR 10.00 price violation held for review.
+- Another tenant received no finding. The staged check stops each container
+  before starting the next. Pushed as `76eec42`.
+
+### Investigation record storage
+
+- Alembic revision 0007 adds tenant-scoped investigation rows and at most one
+  finding with source evidence JSON. A tenant/idempotency key refuses changed
+  content and returns the same ID for an identical retry.
+- Local unit suite: 91 tests run, 18 skipped. Live Windows PostgreSQL migration
+  and repeat check remain pending. No investigation HTTP route or approval event.

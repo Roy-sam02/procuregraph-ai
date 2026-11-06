@@ -263,3 +263,20 @@ This staged diagnostic is a low-memory integration check, not an atomic
 snapshot across databases. The live workflow adapter and investigation API
 remain separate future work; no approval record is created. The unit suite
 uses mocked services and does not establish a live result.
+
+## Stored investigation outcomes
+
+Alembic revision `0007_investigation_records` adds tenant-scoped investigations
+and one optional finding per run. The read/write service in
+`apps/api/app/agents/investigation_records.py` accepts a trusted workflow
+result. A verified finding keeps the price rule and document/graph source IDs
+in JSONB; an abstention stores its error code without a finding. A unique
+tenant/idempotency key returns the original run ID for the same content and
+rejects a changed payload. Reads require a matching tenant UUID.
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_investigation_records.ps1`
+to migrate the retained local PostgreSQL database and repeat-check a controlled
+abstention. It writes one synthetic row with a stable key, checks the tenant
+filter, and stops PostgreSQL while preserving its volume. This check does not
+claim to persist a new live verified finding. No HTTP endpoint, real user
+authentication, approval event, or immutable database permission is added.
