@@ -60,3 +60,19 @@ idempotence, and searches within the demo tenant. Search is bounded to 1–10
 results and uses the latest document version for a contract. This is a
 PostgreSQL lexical baseline; Qdrant, retrieval benchmarks, and a public
 search API remain future work.
+
+## Local Qdrant wiring exercise
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_qdrant_hash_demo.ps1`
+after the passage storage check. It first exports the three checked PostgreSQL
+chunks and three labeled query rankings, stops PostgreSQL, then starts a
+loopback-only Qdrant container with a retained named volume. The script
+indexes the same stable source IDs, checks a repeat run, queries with a tenant
+filter, writes a small local comparison report, and stops Qdrant.
+
+This uses `token-hash-128-v1`, a deterministic lexical hashing vectorizer with
+no model download or GPU. It is **not semantic embeddings**. Three hand-labeled
+synthetic queries test wiring and provenance only; they do not measure ANN
+recall, speed, or real retrieval quality. PostgreSQL remains the authoritative
+source for document versions and passage text. Qdrant is not exposed through
+the application API yet.

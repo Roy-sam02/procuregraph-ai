@@ -1,0 +1,12 @@
+# Local synthetic vector exercise; run after PostgreSQL stops on the 4 GB laptop.
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.16.3
+    mem_limit: 512m
+    ports:
+      - "127.0.0.1::6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:

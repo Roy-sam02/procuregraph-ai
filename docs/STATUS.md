@@ -211,3 +211,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Added bounded, tenant-scoped lexical search over the latest contract document version.
 - All 37 local unit tests passed. The live Windows check registered three chunks; repeat registration changed no rows. Search returned clauses 2.2 and 2.3, a different tenant received no results, and PostgreSQL rejected an update. Both containers stopped afterward.
 - This is the PostgreSQL lexical baseline. Qdrant indexing, retrieval benchmarks, and an HTTP search endpoint remain pending.
+
+### Local Qdrant vector wiring
+
+- Added a separate loopback-only Qdrant container with a retained volume. PostgreSQL and Qdrant run sequentially for the local low-memory check.
+- Exported three source-checked PostgreSQL chunks and labeled lexical rankings. Qdrant stores the same stable source IDs with tenant and document filters.
+- Used deterministic token-hash-128-v1 vectors for a wiring exercise. These are not semantic embeddings, and three synthetic queries do not establish ANN quality or speed.
+- All 42 local unit tests passed. The live Windows check indexed three points; repeat indexing changed no points. Three labeled queries found the expected clauses in PostgreSQL and Qdrant, and a different tenant received no Qdrant hits. Qdrant was stopped and its volume retained.
+- Semantic embeddings, a larger locked retrieval benchmark, and application API integration remain pending.
