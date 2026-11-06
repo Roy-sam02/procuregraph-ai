@@ -370,3 +370,21 @@ This supports one manually provisioned reviewer for a local synthetic demo.
 Anyone holding the reviewer token can act as that reviewer. Production use
 requires individual sign-in and managed credentials. The review screen still
 uses its shared read token, and there is no decision submission in this step.
+
+## Approval storage diagnostic
+
+Alembic revision `0008_approval_decisions` adds one immutable `approvals` row
+per verified finding, with a reviewer ID, approved/rejected decision, reason,
+database timestamp and tenant-scoped idempotency key. The storage function
+locks the finding and checks its tenant and verified review status before
+inserting. Repeating the same key and content returns the same decision ID;
+another decision for that finding fails. The review queue excludes decided
+findings.
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_approval_storage.ps1`
+from the repository root. It starts only PostgreSQL, migrates the retained
+volume, verifies retries, tenant isolation, queue removal and database
+immutability, then rolls back its sample decision and stops PostgreSQL. The
+synthetic finding remains available in the review queue. This storage function
+is not exposed as an HTTP decision route yet. The next API increment must use
+the server-verified reviewer identity for its actor ID.

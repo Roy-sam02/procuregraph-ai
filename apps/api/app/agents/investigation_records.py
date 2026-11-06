@@ -113,8 +113,9 @@ def read_review_queue(connection: Connection, tenant: UUID, limit: int = 10) -> 
                    f.evidence_json->>'currency', f.evidence_json->>'excess_amount'
             FROM investigations i
             JOIN findings f ON f.investigation_id = i.id
+            LEFT JOIN approvals a ON a.finding_id = f.id
             WHERE i.tenant_id = %s AND i.status = 'needs_review'
-              AND f.is_violation = TRUE
+              AND f.is_violation = TRUE AND a.id IS NULL
             ORDER BY i.created_at DESC, i.id DESC
             LIMIT %s
         """, (tenant, limit))
@@ -123,3 +124,44 @@ def read_review_queue(connection: Connection, tenant: UUID, limit: int = 10) -> 
              "invoice_line_id": str(row[2]), "created_at": row[3].isoformat(),
              "finding_id": str(row[4]), "rule_id": row[5], "currency": row[6],
              "excess_amount": row[7], "status": "needs_review"} for row in rows]
+
+
+def record_approval(connection: Connection, tenant: UUID, finding_id: UUID,
+                    actor_id: UUID, decision: str, reason: str, key: str) -> UUID:
+    """Record a final human decision once, with tenant and retry checks."""
+    if any(type(value) is not UUID for value in (tenant, finding_id, actor_id)):
+        raise ValueError("Approval IDs must be UUIDs")
+    if decision not in ("approved", "rejected") or not isinstance(reason, str):
+        raise ValueError("Invalid decision or reason")
+    reason = reason.strip()
+    if not 1 <= len(reason) <= 1000 or not isinstance(key, str) or not 16 <= len(key) <= 128 or not key.isascii():
+        raise ValueError("Invalid reason or idempotency key")
+    proposed = uuid4()
+    with connection.transaction():
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT f.id FROM findings f
+                JOIN investigations i ON i.id = f.investigation_id
+                WHERE f.id = %s AND i.tenant_id = %s
+                  AND i.status = 'needs_review' AND f.is_violation = TRUE
+                FOR UPDATE OF f
+            """, (finding_id, tenant))
+            if cursor.fetchone() is None:
+                raise ValueError("Verified finding is unavailable to this tenant")
+            cursor.execute("""
+                INSERT INTO approvals
+                    (id, tenant_id, finding_id, actor_id, decision, reason, idempotency_key)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT DO NOTHING RETURNING id
+            """, (proposed, tenant, finding_id, actor_id, decision, reason, key))
+            inserted = cursor.fetchone()
+            if inserted is not None:
+                return inserted[0]
+            cursor.execute("""
+                SELECT id, finding_id, actor_id, decision, reason
+                FROM approvals WHERE tenant_id = %s AND idempotency_key = %s
+            """, (tenant, key))
+            existing = cursor.fetchone()
+            if existing is None or existing[1:] != (finding_id, actor_id, decision, reason):
+                raise ValueError("Finding was already decided or key reused for different content")
+            return existing[0]

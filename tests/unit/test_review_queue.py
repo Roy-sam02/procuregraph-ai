@@ -42,6 +42,8 @@ class ReviewQueueTests(unittest.TestCase):
         self.assertIn("i.tenant_id = %s", query)
         self.assertIn("i.status = 'needs_review'", query)
         self.assertIn("f.is_violation = TRUE", query)
+        self.assertIn("LEFT JOIN approvals a", query)
+        self.assertIn("a.id IS NULL", query)
         self.assertEqual(args, (self.tenant, 1))
         for limit in (0, 21, True):
             with self.assertRaises(ValueError):
