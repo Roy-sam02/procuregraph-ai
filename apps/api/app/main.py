@@ -21,7 +21,7 @@ from fastapi import FastAPI, Header, Query
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator, model_validator
 
 from apps.api.app.domain.pricing import is_price_violation
-from apps.api.app.agents.investigation_records import read_investigation, read_review_queue
+from apps.api.app.agents.investigation_records import read_investigation, read_review_queue, record_approval
 from apps.api.app.services.passage_search import search_passages
 from apps.api.app.services.neo4j_graph_api import read_checked_graph
 from apps.api.app.services.passage_rank_fusion import CANDIDATE_LIMIT, fuse_passage_rankings
@@ -242,11 +242,8 @@ class DemoReviewerConfig(BaseModel):
     token_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
-@app.get("/api/v1/review/me", response_model=ReviewerIdentity)
-def get_reviewer_identity(
-    tenant_id: UUID, response: Response,
-    authorization: str | None = Header(default=None),
-):
+def authenticated_reviewer(tenant_id: UUID, authorization: str | None):
+    """Resolve the reviewer and tenant grant before opening a database connection."""
     config = os.environ.get("PROCUREGRAPH_DEMO_REVIEWER")
     if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1" or config is None:
         return evidence_error(404, "NOT_FOUND", "Demo reviewer access is unavailable")
@@ -269,8 +266,72 @@ def get_reviewer_identity(
         return denied
     if tenant_id != reviewer.tenant_id:
         return evidence_error(403, "FORBIDDEN", "Reviewer access is denied for this tenant")
-    response.headers["Cache-Control"] = "no-store"
     return ReviewerIdentity(reviewer_id=reviewer.reviewer_id, tenant_id=reviewer.tenant_id)
+
+
+@app.get("/api/v1/review/me", response_model=ReviewerIdentity)
+def get_reviewer_identity(
+    tenant_id: UUID, response: Response,
+    authorization: str | None = Header(default=None),
+):
+    identity = authenticated_reviewer(tenant_id, authorization)
+    if isinstance(identity, JSONResponse):
+        return identity
+    response.headers["Cache-Control"] = "no-store"
+    return identity
+
+
+class ApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: UUID
+    decision: Literal["approved", "rejected"]
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("reason")
+    @classmethod
+    def nonblank_reason(cls, reason: str) -> str:
+        reason = reason.strip()
+        if not reason:
+            raise ValueError("A decision reason is required")
+        return reason
+
+
+class ApprovalResponse(BaseModel):
+    id: UUID
+    finding_id: UUID
+    actor_id: UUID
+    tenant_id: UUID
+    decision: Literal["approved", "rejected"]
+
+
+@app.post("/api/v1/review/findings/{finding_id}/decision", response_model=ApprovalResponse)
+def submit_review_decision(
+    finding_id: UUID, request: ApprovalRequest, response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=16, max_length=128),
+    authorization: str | None = Header(default=None),
+):
+    identity = authenticated_reviewer(request.tenant_id, authorization)
+    if isinstance(identity, JSONResponse):
+        return identity
+    try:
+        with psycopg.connect(
+            host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+            dbname="procuregraph", user="postgres",
+            password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+        ) as connection:
+            approval_id = record_approval(
+                connection, identity.tenant_id, finding_id, identity.reviewer_id,
+                request.decision, request.reason, idempotency_key,
+            )
+    except ValueError:
+        return evidence_error(409, "DECISION_CONFLICT", "Decision could not be recorded")
+    except (KeyError, psycopg.Error):
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
+    response.headers["Cache-Control"] = "no-store"
+    return ApprovalResponse(id=approval_id, finding_id=finding_id,
+                            actor_id=identity.reviewer_id, tenant_id=identity.tenant_id,
+                            decision=request.decision)
 
 
 @app.get("/api/v1/review/queue", response_model=ReviewQueueResponse)

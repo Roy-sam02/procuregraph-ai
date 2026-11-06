@@ -385,6 +385,22 @@ Run `powershell -ExecutionPolicy Bypass -File scripts/check_approval_storage.ps1
 from the repository root. It starts only PostgreSQL, migrates the retained
 volume, verifies retries, tenant isolation, queue removal and database
 immutability, then rolls back its sample decision and stops PostgreSQL. The
-synthetic finding remains available in the review queue. This storage function
-is not exposed as an HTTP decision route yet. The next API increment must use
-the server-verified reviewer identity for its actor ID.
+synthetic finding remains available in the review queue. The decision API
+below uses the server-verified reviewer identity for its actor ID.
+
+## Local review decision API
+
+`POST /api/v1/review/findings/{finding_id}/decision` accepts a JSON body with
+`tenant_id`, `approved` or `rejected` decision, and a nonblank reason. It
+requires `Authorization: Bearer <reviewer token>` and an `Idempotency-Key`
+header of 16–128 ASCII characters. The actor ID comes from the same server
+grant as `GET /api/v1/review/me`; a caller cannot choose it. The API locks
+the verified finding, stores one final decision with a database timestamp,
+returns the same ID for an identical retry, and rejects a conflicting decision.
+There is no payment or ERP action.
+
+`scripts/check_approval_storage.ps1` now also checks this API against the
+retained synthetic PostgreSQL case. Its API decision is rolled back after
+verification so the review queue remains usable. This endpoint is for a
+single manually provisioned local reviewer; it is not a production sign-in
+system. The React view still only reads findings.

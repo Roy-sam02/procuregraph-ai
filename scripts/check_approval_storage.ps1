@@ -38,6 +38,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Approval migration failed' }
     & $python -m apps.api.app.services.check_approval_storage
     if ($LASTEXITCODE -ne 0) { throw 'Approval storage check failed' }
+    & $python -m apps.api.app.services.check_review_decision_api
+    if ($LASTEXITCODE -ne 0) { throw 'Review decision API check failed' }
 }
 finally {
     if ($started) { docker compose -p procuregraph-demo stop postgres }

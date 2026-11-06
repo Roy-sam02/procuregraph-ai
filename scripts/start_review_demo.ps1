@@ -51,6 +51,21 @@ try {
     try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     $env:PROCUREGRAPH_DEMO_EVIDENCE_TOKEN = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 
+    $reviewerBytes = New-Object byte[] 32
+    $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($reviewerBytes) } finally { $rng.Dispose() }
+    $reviewerToken = [Convert]::ToBase64String($reviewerBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::ASCII.GetBytes($reviewerToken))).Replace('-', '').ToLowerInvariant()
+    }
+    finally { $sha.Dispose() }
+    $env:PROCUREGRAPH_DEMO_REVIEWER = @{
+        reviewer_id = [Guid]::NewGuid().ToString()
+        tenant_id = '6c4b7c99-14f3-5c71-8b65-ed50dc9ce43c'
+        token_sha256 = $digest
+    } | ConvertTo-Json -Compress
+
     $api = Start-Process -FilePath $python -ArgumentList @('-m', 'uvicorn', 'apps.api.app.main:app',
         '--host', '127.0.0.1', '--port', '8000') -PassThru -NoNewWindow
     $ready = $false
@@ -67,6 +82,7 @@ try {
 
     Write-Host 'Open http://127.0.0.1:5173 in your browser.'
     Write-Host "Local demo token (paste into the page, do not share): $env:PROCUREGRAPH_DEMO_EVIDENCE_TOKEN"
+    Write-Host "Local reviewer token (for the decision API only, do not share): $reviewerToken"
     Write-Host 'Press Ctrl+C here when finished to stop the API and PostgreSQL.'
     & npm.cmd run dev --prefix apps/web
 }
