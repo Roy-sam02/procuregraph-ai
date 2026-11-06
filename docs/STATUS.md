@@ -189,3 +189,10 @@ Define the first small procurement example and its deterministic price-checking 
 - A plain assessment has no citation. An unavailable or inconsistent source returns an error without a citation.
 - The 28-test unit suite passed against the synthetic PDF. The live API check passed on the saved PostgreSQL and MinIO volumes: verified reference returned, plain assessment had no citation, and a different tenant received no source. Both containers were stopped afterward.
 - The reference identifies the private PDF; it is not a download URL. The demo does not yet authenticate users.
+
+### Token-protected verified PDF download
+
+- Added a local demo PDF route linked from the verified price evidence reference. It requires a configured bearer token and rechecks the tenant-scoped database link and exact MinIO object version before returning PDF bytes.
+- Missing or wrong tokens are rejected before database or storage access. Changed PDF bytes return no PDF. The response prevents caching.
+- All 31 unit tests passed against the synthetic PDF. The live check passed on the saved PostgreSQL and MinIO volumes: verified bytes returned with a token, missing and wrong tokens were denied, and a different tenant received no source. Both containers were stopped afterward.
+- The shared demo token is not user authentication or role-based tenant authorization. This route is for the local synthetic demo only.

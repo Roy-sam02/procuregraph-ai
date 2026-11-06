@@ -8,7 +8,9 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 
-from apps.api.app.services.contract_evidence import EXPECTED_SHA256, verify_synthetic_pdf_bytes
+from apps.api.app.services.contract_evidence import (
+    EXPECTED_SHA256, VerifiedFixture, verify_synthetic_pdf_bytes,
+)
 from datasets.generator.register_minio_location import validate_receipt
 from datasets.generator.seed_price_case import database_id
 
@@ -42,7 +44,8 @@ def validate_locator(locator: dict) -> tuple[str, str, str]:
     })[:3]
 
 
-def verify_stored_evidence(locator: dict, endpoint: str) -> None:
+def read_verified_pdf(locator: dict, endpoint: str) -> tuple[bytes, VerifiedFixture]:
+    """Return bytes only after the exact stored version and its clauses verify."""
     bucket, key, version_id = validate_locator(locator)
     s3 = boto3.client(
         "s3", endpoint_url=endpoint, region_name="us-east-1",
@@ -65,6 +68,12 @@ def verify_stored_evidence(locator: dict, endpoint: str) -> None:
     )
     if checked.sha256 != locator["sha256"] or checked.page != locator["page"]:
         raise ValueError("Stored PDF does not support the locator")
+    return data, checked
+
+
+def verify_stored_evidence(locator: dict, endpoint: str) -> VerifiedFixture:
+    """Keep the existing check-only interface for the CLI and price API."""
+    _, checked = read_verified_pdf(locator, endpoint)
     return checked
 
 

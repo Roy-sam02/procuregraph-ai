@@ -127,7 +127,10 @@ class VerifiedEvidenceApiTests(unittest.TestCase):
                 "document_id", "document_version", "sha256", "page", "price_clause",
                 "tolerance_clause", "dates_clause",
             )
-        })
+        } | {"download_path": (
+            f"/api/v1/pricing/cases/{self.request['invoice_line_id']}/evidence/pdf"
+            f"?tenant_id={self.request['tenant_id']}"
+        )})
         self.assertEqual(response.json()["excess_amount"], "10.00")
         self.assertEqual(store.request["VersionId"], self.locator["object_version_id"])
         self.assertEqual(read.call_args.args[1:], (

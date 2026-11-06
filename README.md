@@ -22,11 +22,22 @@ verified request, PostgreSQL and MinIO must both be running, with the existing
 `PROCUREGRAPH_DB_PORT`, `PROCUREGRAPH_DB_PASSWORD`,
 `PROCUREGRAPH_MINIO_USER`, `PROCUREGRAPH_MINIO_PASSWORD`, and
 `PROCUREGRAPH_MINIO_ENDPOINT=http://127.0.0.1:<mapped-port>` set in the API
-process. The evidence reference identifies a private source; it is not a PDF
-download URL or an authenticated production citation service. The tenant UUID
-in the request is only a lookup filter, not proof of authorization.
+process. The tenant UUID in the request is only a lookup filter, not proof of
+authorization.
+
+For the local synthetic demo, the evidence reference includes a `download_path`.
+`GET` on that path requires `Authorization: Bearer <token>`, where the API
+process reads `PROCUREGRAPH_DEMO_EVIDENCE_TOKEN` (at least 32 characters)
+from its environment. Keep the token out of Git and URLs. Each download checks
+the tenant-scoped case, retrieves the registered MinIO object version, and
+verifies the PDF again before returning its bytes. A failed check returns no
+PDF. Responses use `Cache-Control: no-store`. This shared demo token does not
+identify individual users or implement the planned sessions, roles, and
+tenant authorization; do not expose the demo API publicly.
 
 On the Windows machine with the retained demo volumes, run
 `powershell -ExecutionPolicy Bypass -File scripts/check_verified_api.ps1` to
-exercise the real API route with both containers briefly running. The script
-stops the containers afterward and retains their volumes.
+exercise the real API route and token-gated PDF download with both containers
+briefly running. The script generates a temporary token in its Python process,
+then stops the containers and retains their volumes. To use the download route
+from a separately started API, configure a token in that API process.

@@ -1,17 +1,18 @@
 import os
+import hmac
 from urllib.parse import urlsplit
 from uuid import UUID
 
 import psycopg
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from apps.api.app.services.price_cases import assess_stored_price_case
 from datasets.generator.export_evidence_locator import read_locator
-from datasets.generator.verify_evidence_locator import verify_stored_evidence
+from datasets.generator.verify_evidence_locator import read_verified_pdf, verify_stored_evidence
 from decimal import Decimal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from pydantic import BaseModel, Field
 
 from apps.api.app.domain.pricing import is_price_violation
@@ -57,6 +58,7 @@ class EvidenceReference(BaseModel):
     price_clause: str
     tolerance_clause: str
     dates_clause: str
+    download_path: str
 
 
 class StoredPriceResponse(BaseModel):
@@ -161,7 +163,11 @@ def assess_stored_case(request: StoredPriceRequest):
             return evidence_error(409, "EVIDENCE_CONFLICT", "Stored source failed verification")
         evidence = EvidenceReference(**{
             name: locator[name] for name in EvidenceReference.model_fields
-        })
+            if name != "download_path"
+        }, download_path=(
+            f"/api/v1/pricing/cases/{request.invoice_line_id}/evidence/pdf"
+            f"?tenant_id={request.tenant_id}"
+        ))
 
     return StoredPriceResponse(
         rule_id=result.rule_id,
@@ -175,4 +181,56 @@ def assess_stored_case(request: StoredPriceRequest):
         excess_amount=str(result.excess_amount),
         is_violation=result.is_violation,
         evidence_reference=evidence,
+    )
+
+
+@app.get("/api/v1/pricing/cases/{invoice_line_id}/evidence/pdf")
+def download_verified_price_pdf(
+    invoice_line_id: UUID, tenant_id: UUID, authorization: str | None = Header(default=None),
+):
+    """Private local-demo PDF read; every request rechecks PostgreSQL and MinIO."""
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
+        return evidence_error(404, "NOT_FOUND", "Demo evidence is unavailable")
+    token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    if len(token) < 32:
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Demo evidence access is not configured")
+    supplied = authorization.removeprefix("Bearer ") if authorization else ""
+    if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+        supplied, token
+    ):
+        response = evidence_error(401, "UNAUTHORIZED", "A demo evidence token is required")
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+
+    try:
+        with psycopg.connect(
+            host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+            dbname="procuregraph", user="postgres",
+            password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+        ) as connection:
+            result = assess_stored_price_case(connection, tenant_id, invoice_line_id)
+            locator = read_locator(connection, tenant_id, UUID(result.contract_line_id))
+    except KeyError:
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database is not configured")
+    except psycopg.OperationalError:
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
+    except LookupError:
+        return evidence_error(404, "CASE_NOT_FOUND", "Invoice line not found for this tenant")
+    except ValueError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Stored source cannot be linked to this case")
+
+    try:
+        data, checked = read_verified_pdf(locator, local_minio_endpoint())
+    except (KeyError, BotoCoreError, ClientError, OSError):
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Stored source could not be checked")
+    except ValueError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Stored source failed verification")
+    return Response(
+        content=data, media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="synthetic_contract_CON-001_v1.pdf"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "X-Document-SHA256": checked.sha256,
+        },
     )
