@@ -275,3 +275,10 @@ Define the first small procurement example and its deterministic price-checking 
 - The live Windows check reverified the PostgreSQL manifest, imported 4 nodes and 4 source-linked edges into Neo4j, and found no changes on a repeat import (0 nodes, 0 edges).
 - A different tenant found no graph nodes. PostgreSQL stopped before Neo4j started; Neo4j stopped after verification, with both volumes retained.
 - This graph covers one synthetic price case. It is not yet a graph query API or a general procurement graph.
+
+### Read-only invoice graph query
+
+- Added a fixed, parameterized, two-hop Neo4j query for the synthetic invoice's supplier, purchase order, and contract relationships. Returned nodes and edge provenance are checked against the saved graph manifest.
+- The Windows unit suite passed: 68 tests run, 18 skipped.
+- The live Windows check returned four source-linked edges; another tenant received no graph chain. Neo4j needed more than 150 readiness checks on this laptop, so the check now allows up to 240 and prints progress.
+- Neo4j stopped afterward with its volume retained. This is a local read tool, not yet an HTTP endpoint; PostgreSQL is not reread during each graph query.

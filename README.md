@@ -188,3 +188,14 @@ provenance and edge creation times, and refuses mismatched existing records.
 It reconciles the graph twice, checks another tenant, then stops Neo4j.
 The first image download may be large. This graph currently covers one
 synthetic price case, not arbitrary procurement records or verified PDF clauses.
+
+## Read-only invoice graph query
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_neo4j_invoice_query.ps1`
+against the retained Neo4j volume. A fixed, two-hop, parameterized Cypher
+query reads the synthetic invoice's supplier, purchase order, and contract
+chain with at most two matching paths. It checks the four nodes and four
+edge source IDs against the saved PostgreSQL-derived manifest before returning
+the graph data. Another tenant receives no result. PostgreSQL and Qdrant stay
+stopped; Neo4j stops after the check. This local read tool does not yet expose
+an HTTP endpoint or recheck PostgreSQL on every graph query.
