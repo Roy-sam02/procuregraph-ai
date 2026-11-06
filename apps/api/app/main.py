@@ -13,9 +13,10 @@ from datasets.generator.verify_evidence_locator import read_verified_pdf, verify
 from decimal import Decimal
 
 from fastapi import FastAPI, Header
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 from apps.api.app.domain.pricing import is_price_violation
+from apps.api.app.services.passage_search import search_passages
 
 app = FastAPI(title="ProcureGraph AI API")
 
@@ -79,6 +80,68 @@ def evidence_error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {
         "code": code, "message": message, "request_id": None, "details": None,
     }})
+
+
+class PassageSearchRequest(BaseModel):
+    tenant_id: UUID
+    query: str = Field(min_length=1, max_length=200)
+    top_k: StrictInt = Field(default=5, ge=1, le=10)
+
+    @field_validator("query")
+    @classmethod
+    def nonblank_query(cls, query: str) -> str:
+        query = query.strip()
+        if not query:
+            raise ValueError("Query cannot be blank")
+        return query
+
+
+class PassageHit(BaseModel):
+    source_id: str
+    document_id: str
+    document_version: int
+    page: int
+    clause: str
+    start_offset: int
+    end_offset: int
+    source_sha256: str
+    text_hash: str
+    snippet: str
+    retrieval_method: str
+    score: float
+
+
+class PassageSearchResponse(BaseModel):
+    hits: list[PassageHit]
+
+
+@app.post("/api/v1/evidence/passages/search", response_model=PassageSearchResponse)
+def search_verified_passages(
+    request: PassageSearchRequest, authorization: str | None = Header(default=None),
+):
+    """Private local-demo lexical search over stored, source-linked chunks."""
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
+        return evidence_error(404, "NOT_FOUND", "Demo passage search is unavailable")
+    token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    if len(token) < 32:
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Demo passage access is not configured")
+    supplied = authorization.removeprefix("Bearer ") if authorization else ""
+    if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+        supplied, token
+    ):
+        response = evidence_error(401, "UNAUTHORIZED", "A demo evidence token is required")
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    try:
+        with psycopg.connect(
+            host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+            dbname="procuregraph", user="postgres",
+            password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+        ) as connection:
+            hits = search_passages(connection, request.tenant_id, request.query, request.top_k)
+    except (KeyError, psycopg.Error, OSError):
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
+    return PassageSearchResponse(hits=hits)
 
 
 def local_minio_endpoint() -> str:

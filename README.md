@@ -94,3 +94,18 @@ The fixture has 16 keyword queries and 16 paraphrases. It is a reproducible
 synthetic regression diagnostic, not evidence of performance on real contracts
 or a measurement of HNSW approximation at scale. The benchmark points are
 separate from verified contract sources and must not be presented as citations.
+
+## Private local passage search API
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_passage_search_api.ps1`
+against the saved synthetic PostgreSQL volume after registering the three
+verified contract passages. The script starts and stops PostgreSQL and checks
+`POST /api/v1/evidence/passages/search` with a temporary demo bearer token.
+The request accepts `tenant_id`, a nonblank `query` of at most 200 characters,
+and `top_k` from 1 to 10. Results contain PostgreSQL source IDs, document
+version, page, clause, text and PDF hashes, a snippet, and lexical rank.
+The route requires `PROCUREGRAPH_ENABLE_DEMO_DB_API=1` and
+`PROCUREGRAPH_DEMO_EVIDENCE_TOKEN` (at least 32 characters). It searches the
+stored source-linked chunks; it does not re-read MinIO on every search or
+expose the separate synthetic semantic benchmark as a citation. The shared
+demo token is not production user authentication.

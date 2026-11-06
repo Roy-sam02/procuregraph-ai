@@ -227,3 +227,9 @@ Define the first small procurement example and its deterministic price-checking 
 - The live Windows check passed: PostgreSQL Recall@5 was 0.375 (12/32); semantic Qdrant Recall@5 was 0.969 (31/32). The other-tenant Qdrant query returned no points.
 - The initial model download recovered from connection errors. PostgreSQL and Qdrant were stopped after their sequential checks.
 - All 45 local unit tests passed. This locked synthetic diagnostic does not establish performance on real contracts; the benchmark passages are separate from verified PDF citations.
+
+### Private passage search API
+
+- Added a token-protected API route for tenant-scoped PostgreSQL search over stored, source-linked contract passages.
+- The live Windows check returned clause 2.2 with its document source. Missing and wrong tokens were denied, another tenant received no hits, and an invalid result limit was rejected.
+- All 48 local unit tests passed. Search uses stored verified chunks; it does not recheck MinIO on each request or serve the separate semantic benchmark passages as contract evidence.
