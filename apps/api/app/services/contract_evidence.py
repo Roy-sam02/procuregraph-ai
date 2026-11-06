@@ -3,6 +3,7 @@
 import hashlib
 import re
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -21,15 +22,14 @@ class VerifiedFixture:
     dates_clause: str = "2.3"
 
 
-def verify_synthetic_pdf(path: Path, clauses: tuple[str, str, str] = CLAUSES) -> VerifiedFixture:
-    """Check identity, page, and clause text; this is not a served citation."""
+def verify_synthetic_pdf_bytes(data: bytes, clauses: tuple[str, str, str] = CLAUSES) -> VerifiedFixture:
+    """Check the bytes retrieved from storage, including exact page and clauses."""
     if clauses != CLAUSES:
         raise ValueError("Incorrect clause references for the synthetic price term")
-    data = path.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
     if digest != EXPECTED_SHA256:
         raise ValueError(f"Unexpected PDF SHA-256: {digest}")
-    reader = PdfReader(path, strict=True)
+    reader = PdfReader(BytesIO(data), strict=True)
     if len(reader.pages) != 1:
         raise ValueError("Synthetic contract must have exactly one page")
     text = " ".join((reader.pages[0].extract_text() or "").split())
@@ -54,3 +54,8 @@ def verify_synthetic_pdf(path: Path, clauses: tuple[str, str, str] = CLAUSES) ->
     if "Clauses 2.1 and 2.2 apply from 1 January 2025 through 31 December 2025, inclusive" not in dates:
         raise ValueError("Clause 2.3 does not support the price-term dates")
     return VerifiedFixture(sha256=digest)
+
+
+def verify_synthetic_pdf(path: Path, clauses: tuple[str, str, str] = CLAUSES) -> VerifiedFixture:
+    """Check a local fixture file; the bytes verifier also handles MinIO reads."""
+    return verify_synthetic_pdf_bytes(path.read_bytes(), clauses)

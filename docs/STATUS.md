@@ -174,3 +174,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Verified PostgreSQL linked the location to document v1 and its page 1 price clauses. A repeat registration changed no rows, and PostgreSQL rejected an update to the location.
 - The 21-test unit suite passed. Both local container checks passed sequentially, and their named volumes were retained.
 - The receipt is a local handoff for this synthetic demo. The API does not yet fetch and recheck the object when serving evidence, so it does not yet provide a verified citation. A revised contract PDF will need version-aware price-term evidence links.
+
+### Verified stored PDF readback
+
+- Added a local read path that exports the tenant-scoped document and price-term locator from PostgreSQL, then retrieves the exact registered MinIO object version.
+- The retrieved PDF is checked against its SHA-256 and selectable page 1 text: clause 2.1 for INR 100.00, clause 2.2 for 5.00% and INR 105.00, and clause 2.3 for the 2025 effective dates.
+- The 24-test unit suite passed against the actual synthetic PDF, including changed-byte, incorrect-clause, and wrong-tenant checks.
+- The live check passed with PostgreSQL and MinIO run sequentially. Both containers were stopped afterward and their saved volumes retained.
+- This is a local synthetic evidence check. The API does not yet retrieve the PDF or serve a verified citation to callers.
