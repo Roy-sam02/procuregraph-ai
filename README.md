@@ -76,3 +76,21 @@ synthetic queries test wiring and provenance only; they do not measure ANN
 recall, speed, or real retrieval quality. PostgreSQL remains the authoritative
 source for document versions and passage text. Qdrant is not exposed through
 the application API yet.
+
+## Local semantic retrieval diagnostic
+
+Install the optional pinned dependency with
+`\.venv\Scripts\python.exe -m pip install -r apps/api/requirements-retrieval.txt`.
+Then run `powershell -ExecutionPolicy Bypass -File scripts/check_semantic_benchmark.ps1`.
+The first use downloads the small `BAAI/bge-small-en-v1.5` ONNX model into
+`.local-fixtures/fastembed_cache`; no GPU or API key is needed. PostgreSQL
+ranks a locked fixture of 16 synthetic procurement passages and 32 labeled
+queries, then stops before Qdrant starts. Qdrant stores 384-dimensional model
+vectors in a separate benchmark collection. The report is saved to
+`.local-fixtures/semantic_benchmark_report_v1.json` with Recall@1/5, MRR@10,
+nDCG@10, timing summaries, and failed queries for both methods.
+
+The fixture has 16 keyword queries and 16 paraphrases. It is a reproducible
+synthetic regression diagnostic, not evidence of performance on real contracts
+or a measurement of HNSW approximation at scale. The benchmark points are
+separate from verified contract sources and must not be presented as citations.

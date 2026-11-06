@@ -219,3 +219,11 @@ Define the first small procurement example and its deterministic price-checking 
 - Used deterministic token-hash-128-v1 vectors for a wiring exercise. These are not semantic embeddings, and three synthetic queries do not establish ANN quality or speed.
 - All 42 local unit tests passed. The live Windows check indexed three points; repeat indexing changed no points. Three labeled queries found the expected clauses in PostgreSQL and Qdrant, and a different tenant received no Qdrant hits. Qdrant was stopped and its volume retained.
 - Semantic embeddings, a larger locked retrieval benchmark, and application API integration remain pending.
+
+### Local semantic retrieval benchmark
+
+- Added CPU-based BGE small embeddings and a separate Qdrant benchmark collection.
+- Compared PostgreSQL full-text search and semantic Qdrant search on 16 synthetic procurement passages and 32 labeled queries.
+- The live Windows check passed: PostgreSQL Recall@5 was 0.375 (12/32); semantic Qdrant Recall@5 was 0.969 (31/32). The other-tenant Qdrant query returned no points.
+- The initial model download recovered from connection errors. PostgreSQL and Qdrant were stopped after their sequential checks.
+- All 45 local unit tests passed. This locked synthetic diagnostic does not establish performance on real contracts; the benchmark passages are separate from verified PDF citations.
