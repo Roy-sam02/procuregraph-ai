@@ -3,3 +3,4 @@ uvicorn==0.54.0
 alembic==1.16.5
 SQLAlchemy==2.0.43
 psycopg[binary]==3.2.9
+pypdf==6.1.1

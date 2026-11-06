@@ -13,3 +13,4 @@ node_modules/
 dist/
 # Local demo process and logs
 .local-demo.*
+.local-fixtures/

@@ -150,3 +150,13 @@ Define the first small procurement example and its deterministic price-checking 
 - Added PowerShell start and stop scripts for a local FastAPI and PostgreSQL synthetic price demonstration.
 - Verified start, stop, start, and stop. Both starts returned the INR 105 allowed price and INR 10 excess through the live API. The second start reused the seeded PostgreSQL volume.
 - The stop script retains the named volume. The local `.env`, process ID, port, and logs are ignored by Git. The stored-case endpoint remains a local synthetic demo without user authentication.
+
+### Contract PDF fixture provenance (local checks)
+
+- Inspected the actual one-page, selectable-text synthetic PDF. Its SHA-256 is `4ae87579a28b27d62cf9d92a5f99876bb03b069baa5576bb2dd7d74406d57b0f`.
+- Checked identity and clause 2.1 (INR 100.00), 2.2 (5.00%, INR 105.00), and 2.3 (2025 dates). A changed PDF and swapped clause references were rejected.
+- The unit suite passed 18 tests with `PROCUREGRAPH_CONTRACT_PDF` set to the actual file; the check-only attachment command also passed.
+- Applied revision 0004 and attached the verified PDF fixture to the stored price term. PostgreSQL returned version 1, the expected SHA-256, fixture storage with no object key, page 1, and clauses 2.1/2.2/2.3.
+- A repeat attachment changed no rows. PostgreSQL rejected an update to the immutable document record.
+- The local demo started successfully on retry after attachment; its existing API returned the INR 105 limit and INR 10 excess. The first startup attempt timed out, with no error captured in its logs.
+- `storage_backend=fixture` has no object key or served citation. The PDF is local test input; MinIO upload, content recheck on retrieval, and a source-serving citation are future increments.
