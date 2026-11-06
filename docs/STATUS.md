@@ -345,3 +345,17 @@ Define the first small procurement example and its deterministic price-checking 
   records the verified INR 10.00 finding once. It tests repeat and tenant reads.
 - Local unit suite: 93 tests run, 18 skipped. The live Windows sequential check
   is pending. No investigation endpoint or human approval has been added.
+
+### Verified finding persistence live result
+
+- Windows sequential check passed: a verified INR 10.00 finding with PDF and
+  graph source IDs was saved once; retry reused its ID, another tenant could
+  not read it, and all containers stopped. Pushed as `c8653ae`.
+
+### Private investigation result API
+
+- Added a token-gated read of tenant-filtered persisted investigation and
+  finding records. A missing token is denied before DB access; absent tenant
+  records return 404; an inconsistent stored shape returns 409.
+- Local unit suite: 97 tests run, 18 skipped. Live Windows PostgreSQL API
+  check pending. The demo token is shared, not a tenant-bound user identity.

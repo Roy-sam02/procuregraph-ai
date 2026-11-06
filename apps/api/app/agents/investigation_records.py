@@ -1,13 +1,17 @@
 """Append a verified workflow outcome once and read it within its tenant."""
 
+from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from psycopg import Connection
 
-from apps.api.app.agents.investigation_workflow import InvestigationResult
+if TYPE_CHECKING:
+    from apps.api.app.agents.investigation_workflow import InvestigationResult
 
 
 def _payload(result: InvestigationResult, tenant: UUID, invoice: UUID,

@@ -16,9 +16,10 @@ from datasets.generator.verify_evidence_locator import read_verified_pdf, verify
 from decimal import Decimal
 
 from fastapi import FastAPI, Header
-from pydantic import BaseModel, Field, StrictInt, field_validator
+from pydantic import BaseModel, Field, StrictInt, ValidationError, field_validator, model_validator
 
 from apps.api.app.domain.pricing import is_price_violation
+from apps.api.app.agents.investigation_records import read_investigation
 from apps.api.app.services.passage_search import search_passages
 from apps.api.app.services.neo4j_graph_api import read_checked_graph
 from apps.api.app.services.passage_rank_fusion import CANDIDATE_LIMIT, fuse_passage_rankings
@@ -157,6 +158,90 @@ class InvoiceGraph(BaseModel):
 
 class InvoiceGraphResponse(BaseModel):
     chain: InvoiceGraph | None
+
+
+class StoredFinding(BaseModel):
+    tenant_id: str
+    invoice_id: str
+    invoice_line_id: str
+    rule_id: str
+    currency: str
+    allowed_unit_price: str
+    invoice_unit_price: str
+    quantity: str
+    excess_amount: str
+    is_violation: bool
+    document_id: str
+    document_version: int
+    document_sha256: str
+    page: int
+    clauses: list[str] = Field(min_length=3, max_length=3)
+    graph_edge_ids: list[str] = Field(min_length=4, max_length=4)
+
+
+class StoredInvestigation(BaseModel):
+    id: str
+    tenant_id: str
+    invoice_id: str
+    invoice_line_id: str
+    created_by: str
+    status: Literal["complete", "needs_review", "abstained"]
+    error_code: str | None
+    created_at: str
+    finding_id: str | None
+    finding: StoredFinding | None
+
+    @model_validator(mode="after")
+    def consistent_result(self):
+        if (self.status == "abstained") != (self.finding is None):
+            raise ValueError("Saved investigation status and finding disagree")
+        if (self.status == "abstained") != (self.error_code is not None):
+            raise ValueError("Saved investigation status and error disagree")
+        if self.finding is not None and (
+            self.finding.tenant_id != self.tenant_id
+            or self.finding.invoice_id != self.invoice_id
+            or self.finding.invoice_line_id != self.invoice_line_id
+            or (self.finding_id is None)
+            or self.finding.is_violation != (self.status == "needs_review")
+        ):
+            raise ValueError("Saved finding identity differs from investigation")
+        if self.finding is None and self.finding_id is not None:
+            raise ValueError("Saved finding ID has no finding")
+        return self
+
+
+@app.get("/api/v1/investigations/{investigation_id}", response_model=StoredInvestigation)
+def get_stored_investigation(
+    investigation_id: UUID, tenant_id: UUID,
+    authorization: str | None = Header(default=None),
+):
+    """Private demo record read; the shared token is not tenant-bound identity."""
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
+        return evidence_error(404, "NOT_FOUND", "Demo investigation is unavailable")
+    token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    if len(token) < 32:
+        return evidence_error(503, "EVIDENCE_UNAVAILABLE", "Demo access is not configured")
+    supplied = authorization.removeprefix("Bearer ") if authorization else ""
+    if not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(
+        supplied, token
+    ):
+        response = evidence_error(401, "UNAUTHORIZED", "A demo evidence token is required")
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    try:
+        with psycopg.connect(
+            host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
+            dbname="procuregraph", user="postgres",
+            password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
+        ) as connection:
+            saved = read_investigation(connection, tenant_id, investigation_id)
+        if saved is None:
+            return evidence_error(404, "NOT_FOUND", "Investigation not found")
+        return StoredInvestigation.model_validate(saved)
+    except ValidationError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Stored investigation is inconsistent")
+    except (KeyError, ValueError, psycopg.Error):
+        return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
 
 
 @app.post("/api/v1/graph/invoices/chain", response_model=InvoiceGraphResponse)

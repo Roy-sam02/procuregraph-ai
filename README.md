@@ -296,3 +296,19 @@ removed after the check; the PostgreSQL row remains in its retained volume.
 This is a staged local diagnostic. It is not an atomic cross-store transaction,
 an authenticated investigation API, or a human approval. The `needs_review`
 status does not mean a payment decision was approved.
+
+## Private investigation result API
+
+`GET /api/v1/investigations/{investigation_id}?tenant_id=<uuid>` reads a
+saved investigation and its finding from PostgreSQL. It uses the local demo
+feature flag and the same bearer token as the private passage and graph routes.
+The response has a stable status, optional error, and optional price finding
+with document version, SHA-256, clauses, and graph edge IDs. A missing token is
+denied before a database connection; a record outside the supplied tenant is
+404. The route does not start an investigation or write to the database.
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_investigation_read_api.ps1`
+after the verified finding has been persisted. The check starts only retained
+PostgreSQL and reads the saved finding and abstention, then stops it. The shared
+demo token is not bound to a real user or tenant; a production identity and
+authorization layer is still required before exposing this beyond local use.
