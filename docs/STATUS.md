@@ -240,3 +240,10 @@ Define the first small procurement example and its deterministic price-checking 
 - The live Windows check found the existing PostgreSQL export unchanged. Repeat Qdrant indexing changed no points; tenant, document version, and PDF hash filters were checked, and another tenant received no hits.
 - All three labeled diagnostic queries ranked the expected clause first. This three-clause result is not a broad retrieval-quality benchmark.
 - All 50 local unit tests passed. PostgreSQL and Qdrant stopped after their sequential checks; the semantic index is not yet exposed through the API.
+
+### Semantic passage search API
+
+- Added `qdrant_bge_small` as a private passage-search option; PostgreSQL lexical search remains the default.
+- Before returning a semantic snippet, the API checks its current tenant-scoped PostgreSQL source, document version, and exact source payload.
+- The live Windows check passed: Qdrant clause 2.2 matched the current PostgreSQL source and lexical result; a missing token was denied; another tenant received no semantic hits.
+- PostgreSQL and Qdrant stopped after the check, with their volumes retained. The three-query diagnostic is small, and the separate synthetic benchmark passages are not verified contract citations.

@@ -1,7 +1,10 @@
 import os
 import hmac
+from pathlib import Path
 from urllib.parse import urlsplit
+from urllib.error import URLError
 from uuid import UUID
+from typing import Literal
 
 import psycopg
 from botocore.exceptions import BotoCoreError, ClientError
@@ -17,6 +20,9 @@ from pydantic import BaseModel, Field, StrictInt, field_validator
 
 from apps.api.app.domain.pricing import is_price_violation
 from apps.api.app.services.passage_search import search_passages
+from apps.api.app.services.qdrant_hash_demo import local_endpoint
+from apps.api.app.services.semantic_embeddings import LocalEncoder
+from apps.api.app.services.semantic_passage_search import search_semantic_passages
 
 app = FastAPI(title="ProcureGraph AI API")
 
@@ -86,6 +92,7 @@ class PassageSearchRequest(BaseModel):
     tenant_id: UUID
     query: str = Field(min_length=1, max_length=200)
     top_k: StrictInt = Field(default=5, ge=1, le=10)
+    retrieval_method: Literal["postgres_fts", "qdrant_bge_small"] = "postgres_fts"
 
     @field_validator("query")
     @classmethod
@@ -119,7 +126,7 @@ class PassageSearchResponse(BaseModel):
 def search_verified_passages(
     request: PassageSearchRequest, authorization: str | None = Header(default=None),
 ):
-    """Private local-demo lexical search over stored, source-linked chunks."""
+    """Private demo search; semantic hits must match current PostgreSQL sources."""
     if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1":
         return evidence_error(404, "NOT_FOUND", "Demo passage search is unavailable")
     token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
@@ -133,13 +140,29 @@ def search_verified_passages(
         response.headers["WWW-Authenticate"] = "Bearer"
         return response
     try:
+        endpoint = None
+        encoder = None
+        if request.retrieval_method == "qdrant_bge_small":
+            try:
+                endpoint = local_endpoint(os.environ["PROCUREGRAPH_QDRANT_ENDPOINT"])
+            except (KeyError, ValueError) as exc:
+                raise OSError("Invalid local Qdrant endpoint") from exc
+            encoder = LocalEncoder(Path(".local-fixtures/fastembed_cache"))
         with psycopg.connect(
             host="127.0.0.1", port=int(os.environ["PROCUREGRAPH_DB_PORT"]),
             dbname="procuregraph", user="postgres",
             password=os.environ["PROCUREGRAPH_DB_PASSWORD"],
         ) as connection:
-            hits = search_passages(connection, request.tenant_id, request.query, request.top_k)
-    except (KeyError, psycopg.Error, OSError):
+            if request.retrieval_method == "postgres_fts":
+                hits = search_passages(connection, request.tenant_id, request.query, request.top_k)
+            else:
+                hits = search_semantic_passages(
+                    connection, request.tenant_id, request.query, request.top_k,
+                    endpoint, encoder,
+                )
+    except ValueError:
+        return evidence_error(409, "EVIDENCE_CONFLICT", "Semantic source failed verification")
+    except (KeyError, psycopg.Error, OSError, URLError, RuntimeError):
         return evidence_error(503, "DATABASE_UNAVAILABLE", "Demo database could not be reached")
     return PassageSearchResponse(hits=hits)
 

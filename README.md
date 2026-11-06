@@ -122,3 +122,18 @@ refuses changed points on repeat runs. Its diagnostic report is written to
 `.local-fixtures/verified_semantic_report_v1.json` and includes three labeled
 top-1 comparisons and a wrong-tenant query. Three synthetic clauses are too
 few to establish retrieval quality. This index is not yet exposed by the API.
+
+## Semantic passage search API
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_semantic_passage_api.ps1`
+after indexing the three verified chunks. This check briefly starts the saved
+PostgreSQL and Qdrant containers together (256 MB and 512 MB container limits)
+and stops both afterward. The private `POST /api/v1/evidence/passages/search`
+request now accepts `retrieval_method: "qdrant_bge_small"`; omission keeps the
+existing PostgreSQL lexical search. Semantic search requires the same demo
+bearer token and `PROCUREGRAPH_QDRANT_ENDPOINT` on loopback. It embeds the query
+locally, filters Qdrant by tenant, then looks up every returned source ID in
+PostgreSQL and checks its current document version and exact source payload
+before returning a PostgreSQL snippet. A stale or mismatched source fails the
+whole request. This is a local synthetic demo, not production authentication;
+the MinIO PDF is not reread on each search.
