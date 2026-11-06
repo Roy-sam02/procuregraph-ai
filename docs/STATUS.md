@@ -233,3 +233,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Added a token-protected API route for tenant-scoped PostgreSQL search over stored, source-linked contract passages.
 - The live Windows check returned clause 2.2 with its document source. Missing and wrong tokens were denied, another tenant received no hits, and an invalid result limit was rejected.
 - All 48 local unit tests passed. Search uses stored verified chunks; it does not recheck MinIO on each request or serve the separate semantic benchmark passages as contract evidence.
+
+### Verified contract semantic index
+
+- Embedded the three PostgreSQL-verified contract passages with the local BGE small model and indexed their stable source IDs in a separate Qdrant collection.
+- The live Windows check found the existing PostgreSQL export unchanged. Repeat Qdrant indexing changed no points; tenant, document version, and PDF hash filters were checked, and another tenant received no hits.
+- All three labeled diagnostic queries ranked the expected clause first. This three-clause result is not a broad retrieval-quality benchmark.
+- All 50 local unit tests passed. PostgreSQL and Qdrant stopped after their sequential checks; the semantic index is not yet exposed through the API.

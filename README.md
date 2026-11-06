@@ -109,3 +109,16 @@ The route requires `PROCUREGRAPH_ENABLE_DEMO_DB_API=1` and
 stored source-linked chunks; it does not re-read MinIO on every search or
 expose the separate synthetic semantic benchmark as a citation. The shared
 demo token is not production user authentication.
+
+## Verified contract semantic index
+
+Run `powershell -ExecutionPolicy Bypass -File scripts/check_verified_semantic_index.ps1`
+after the verified passage registration and optional FastEmbed dependency are
+in place. The script checks the manifest against PostgreSQL, stops PostgreSQL,
+then starts Qdrant and embeds the same three PDF-derived clauses with the
+cached local BGE small model. A separate collection keeps their stable source
+IDs, tenant, document version, PDF hash, text hash, page and clause. The index
+refuses changed points on repeat runs. Its diagnostic report is written to
+`.local-fixtures/verified_semantic_report_v1.json` and includes three labeled
+top-1 comparisons and a wrong-tenant query. Three synthetic clauses are too
+few to establish retrieval quality. This index is not yet exposed by the API.
