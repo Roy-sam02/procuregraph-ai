@@ -247,3 +247,10 @@ Define the first small procurement example and its deterministic price-checking 
 - Before returning a semantic snippet, the API checks its current tenant-scoped PostgreSQL source, document version, and exact source payload.
 - The live Windows check passed: Qdrant clause 2.2 matched the current PostgreSQL source and lexical result; a missing token was denied; another tenant received no semantic hits.
 - PostgreSQL and Qdrant stopped after the check, with their volumes retained. The three-query diagnostic is small, and the separate synthetic benchmark passages are not verified contract citations.
+
+### Verified passage rank fusion
+
+- Added bounded `rrf_60` passage search, combining PostgreSQL lexical and verified Qdrant semantic ranks by source ID. Existing lexical search remains the default.
+- The Windows unit suite passed: 56 tests run, 18 skipped.
+- The live Windows check returned one PostgreSQL-backed clause 2.2 source from fusion. The missing token was denied, and another tenant received no semantic or fused hits.
+- PostgreSQL and Qdrant stopped after the check; their volumes were retained. This three-clause live check does not establish broad retrieval quality. The separate synthetic benchmark passages are not verified contract citations.

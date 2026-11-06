@@ -32,10 +32,21 @@ def check() -> None:
     assert lexical.status_code == 200 and lexical.json()["hits"][0]["source_id"] == hits[0]["source_id"], lexical.text
     print("PASS: semantic API matched Qdrant clause 2.2 to the current PostgreSQL source and lexical result")
 
+    fused = client.post(path, json={**request, "retrieval_method": "rrf_60"}, headers=headers)
+    assert fused.status_code == 200, fused.text
+    fused_hits = fused.json()["hits"]
+    assert len(fused_hits) == 1 and fused_hits[0]["source_id"] == hits[0]["source_id"], fused_hits
+    assert fused_hits[0]["retrieval_method"] == "rrf_60", fused_hits
+    assert fused_hits[0]["source_sha256"] == EXPECTED_SHA256, fused_hits
+    print("PASS: fused ranking returned one verified PostgreSQL-backed clause 2.2 source")
+
     other = client.post(path, json={**request, "tenant_id": str(database_id("OTHER", "TENANT"))},
                         headers=headers)
     assert other.status_code == 200 and other.json() == {"hits": []}, other.text
-    print("PASS: missing token was denied and another tenant got no semantic hits")
+    other_fused = client.post(path, json={**request, "tenant_id": str(database_id("OTHER", "TENANT")),
+                                           "retrieval_method": "rrf_60"}, headers=headers)
+    assert other_fused.status_code == 200 and other_fused.json() == {"hits": []}, other_fused.text
+    print("PASS: missing token was denied and another tenant got no semantic or fused hits")
 
 
 if __name__ == "__main__":

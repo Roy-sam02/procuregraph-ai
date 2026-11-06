@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictInt, field_validator
 
 from apps.api.app.domain.pricing import is_price_violation
 from apps.api.app.services.passage_search import search_passages
+from apps.api.app.services.passage_rank_fusion import CANDIDATE_LIMIT, fuse_passage_rankings
 from apps.api.app.services.qdrant_hash_demo import local_endpoint
 from apps.api.app.services.semantic_embeddings import LocalEncoder
 from apps.api.app.services.semantic_passage_search import search_semantic_passages
@@ -92,7 +93,7 @@ class PassageSearchRequest(BaseModel):
     tenant_id: UUID
     query: str = Field(min_length=1, max_length=200)
     top_k: StrictInt = Field(default=5, ge=1, le=10)
-    retrieval_method: Literal["postgres_fts", "qdrant_bge_small"] = "postgres_fts"
+    retrieval_method: Literal["postgres_fts", "qdrant_bge_small", "rrf_60"] = "postgres_fts"
 
     @field_validator("query")
     @classmethod
@@ -142,7 +143,7 @@ def search_verified_passages(
     try:
         endpoint = None
         encoder = None
-        if request.retrieval_method == "qdrant_bge_small":
+        if request.retrieval_method in ("qdrant_bge_small", "rrf_60"):
             try:
                 endpoint = local_endpoint(os.environ["PROCUREGRAPH_QDRANT_ENDPOINT"])
             except (KeyError, ValueError) as exc:
@@ -155,11 +156,20 @@ def search_verified_passages(
         ) as connection:
             if request.retrieval_method == "postgres_fts":
                 hits = search_passages(connection, request.tenant_id, request.query, request.top_k)
-            else:
+            elif request.retrieval_method == "qdrant_bge_small":
                 hits = search_semantic_passages(
                     connection, request.tenant_id, request.query, request.top_k,
                     endpoint, encoder,
                 )
+            else:
+                lexical = search_passages(
+                    connection, request.tenant_id, request.query, CANDIDATE_LIMIT,
+                )
+                semantic = search_semantic_passages(
+                    connection, request.tenant_id, request.query, CANDIDATE_LIMIT,
+                    endpoint, encoder,
+                )
+                hits = fuse_passage_rankings(lexical, semantic, request.top_k)
     except ValueError:
         return evidence_error(409, "EVIDENCE_CONFLICT", "Semantic source failed verification")
     except (KeyError, psycopg.Error, OSError, URLError, RuntimeError):

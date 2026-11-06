@@ -121,7 +121,7 @@ IDs, tenant, document version, PDF hash, text hash, page and clause. The index
 refuses changed points on repeat runs. Its diagnostic report is written to
 `.local-fixtures/verified_semantic_report_v1.json` and includes three labeled
 top-1 comparisons and a wrong-tenant query. Three synthetic clauses are too
-few to establish retrieval quality. This index is not yet exposed by the API.
+few to establish retrieval quality. The private API below now exposes it.
 
 ## Semantic passage search API
 
@@ -137,3 +137,16 @@ PostgreSQL and checks its current document version and exact source payload
 before returning a PostgreSQL snippet. A stale or mismatched source fails the
 whole request. This is a local synthetic demo, not production authentication;
 the MinIO PDF is not reread on each search.
+
+## Verified passage rank fusion
+
+Set `retrieval_method: "rrf_60"` on the private passage search route to combine
+the PostgreSQL lexical and verified Qdrant semantic rankings. The API takes at
+most ten candidates from each, deduplicates by PostgreSQL source ID, and adds
+`1/(60+rank)` for each ranking containing that source. It returns at most
+`top_k` results with the fused score. Conflicting metadata for the same source
+fails the request; a stale or mismatched Qdrant source also fails the request.
+The existing token, tenant, and document-version checks still apply. Run
+`powershell -ExecutionPolicy Bypass -File scripts/check_semantic_passage_api.ps1`
+to check the fused mode against the saved synthetic demo, then stop both
+containers. This three-clause check is not a broad retrieval evaluation.
