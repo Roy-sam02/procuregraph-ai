@@ -350,3 +350,23 @@ and cannot approve, edit, pay, or contact a supplier.
 This is a read-only local prototype, not a production login or tenant-bound
 authorization scheme. It displays source identifiers rather than opening PDF
 pages or drawing an interactive graph; those views remain later work.
+
+## Local reviewer identity check
+
+`GET /api/v1/review/me?tenant_id=<uuid>` returns the configured reviewer ID,
+tenant ID, and `reviewer` role. The requested tenant must match the reviewer's
+server-side grant. Missing or wrong credentials return 401, and a valid
+reviewer credential for a different tenant returns 403.
+
+On loopback, enable `PROCUREGRAPH_ENABLE_DEMO_DB_API=1` and set the API process's
+`PROCUREGRAPH_DEMO_REVIEWER` to a JSON object with `reviewer_id` and `tenant_id`
+UUIDs and `token_sha256`, the lowercase SHA-256 hex digest of a reviewer token
+generated separately with Python's `secrets.token_urlsafe(32)`. Send the raw
+reviewer token only in the Authorization bearer header. The route is disabled
+without the grant, and the existing evidence token cannot double as a reviewer
+credential. The check uses no PostgreSQL connection.
+
+This supports one manually provisioned reviewer for a local synthetic demo.
+Anyone holding the reviewer token can act as that reviewer. Production use
+requires individual sign-in and managed credentials. The review screen still
+uses its shared read token, and there is no decision submission in this step.

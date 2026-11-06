@@ -1,5 +1,7 @@
-import os
+import hashlib
 import hmac
+import os
+import re
 from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.error import URLError
@@ -16,7 +18,7 @@ from datasets.generator.verify_evidence_locator import read_verified_pdf, verify
 from decimal import Decimal
 
 from fastapi import FastAPI, Header, Query
-from pydantic import BaseModel, Field, StrictInt, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator, model_validator
 
 from apps.api.app.domain.pricing import is_price_violation
 from apps.api.app.agents.investigation_records import read_investigation, read_review_queue
@@ -224,6 +226,51 @@ class ReviewQueueItem(BaseModel):
 
 class ReviewQueueResponse(BaseModel):
     items: list[ReviewQueueItem]
+
+
+class ReviewerIdentity(BaseModel):
+    reviewer_id: UUID
+    tenant_id: UUID
+    role: Literal["reviewer"] = "reviewer"
+
+
+class DemoReviewerConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reviewer_id: UUID
+    tenant_id: UUID
+    token_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+@app.get("/api/v1/review/me", response_model=ReviewerIdentity)
+def get_reviewer_identity(
+    tenant_id: UUID, response: Response,
+    authorization: str | None = Header(default=None),
+):
+    config = os.environ.get("PROCUREGRAPH_DEMO_REVIEWER")
+    if os.environ.get("PROCUREGRAPH_ENABLE_DEMO_DB_API") != "1" or config is None:
+        return evidence_error(404, "NOT_FOUND", "Demo reviewer access is unavailable")
+    try:
+        reviewer = DemoReviewerConfig.model_validate_json(config)
+    except ValidationError:
+        return evidence_error(503, "REVIEWER_UNAVAILABLE", "Demo reviewer configuration is invalid")
+    shared_token = os.environ.get("PROCUREGRAPH_DEMO_EVIDENCE_TOKEN", "")
+    shared_digest = hashlib.sha256(shared_token.encode("utf-8")).hexdigest()
+    if hmac.compare_digest(reviewer.token_sha256, shared_digest):
+        return evidence_error(503, "REVIEWER_UNAVAILABLE", "Reviewer credentials must be separate")
+
+    scheme, _, token = (authorization or "").partition(" ")
+    if (scheme.lower() != "bearer" or re.fullmatch(r"[A-Za-z0-9_-]{43}", token) is None
+            or not hmac.compare_digest(
+                hashlib.sha256(token.encode("ascii")).hexdigest(), reviewer.token_sha256
+            )):
+        denied = evidence_error(401, "UNAUTHORIZED", "A reviewer token is required")
+        denied.headers["WWW-Authenticate"] = "Bearer"
+        return denied
+    if tenant_id != reviewer.tenant_id:
+        return evidence_error(403, "FORBIDDEN", "Reviewer access is denied for this tenant")
+    response.headers["Cache-Control"] = "no-store"
+    return ReviewerIdentity(reviewer_id=reviewer.reviewer_id, tenant_id=reviewer.tenant_id)
 
 
 @app.get("/api/v1/review/queue", response_model=ReviewQueueResponse)
